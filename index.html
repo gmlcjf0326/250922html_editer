@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Live Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
+
+    <!-- 파일 업로드 초기 화면 -->
+    <div class="upload-screen" id="uploadScreen">
+        <div class="upload-container">
+            <div class="upload-icon">📄</div>
+            <h1>HTML Live Editor</h1>
+            <p>HTML 파일을 업로드하여 실시간으로 편집하세요</p>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <h3>HTML 파일을 여기에 드래그하거나</h3>
+                    <button id="uploadBtn" class="btn btn-primary">
+                        📁 HTML 파일 선택
+                    </button>
+                    <small>지원 형식: .html, .htm</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전체화면 iframe -->
+    <iframe id="previewFrame" class="fullscreen-frame" style="display: none;"></iframe>
+
+    <!-- 다운로드 버튼 -->
+    <div class="download-button" id="downloadButton" style="display: none;">
+        <button id="downloadBtn" class="download-btn">
+            📥 다운로드
+        </button>
+        <button id="undoBtn" class="undo-btn" title="되돌리기 (Ctrl+Z)" disabled>
+            ↶ 되돌리기
+        </button>
+        <button id="redoBtn" class="redo-btn" title="다시실행 (Ctrl+Y)" disabled>
+            ↷ 다시실행
+        </button>
+    </div>
+
+    <!-- 파일 정보 표시 -->
+    <div class="file-info" id="fileInfo" style="display: none;">
+        <span id="fileName" class="file-name"></span>
+        <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+    </div>
+
+    <!-- 컨텍스트 메뉴 -->
+    <div class="context-menu" id="contextMenu" style="display: none;">
+        <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
+        <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
+        <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
+        <div class="context-menu-item" data-action="add-link">➕ 링크 추가</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
+        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+    </div>
+
+    <!-- 테이블 전용 컨텍스트 메뉴 -->
+    <div class="table-context-menu" id="tableContextMenu" style="display: none;">
+        <div class="context-menu-item" data-action="add-row-above">⬆️ 위에 행 추가</div>
+        <div class="context-menu-item" data-action="add-row-below">⬇️ 아래에 행 추가</div>
+        <div class="context-menu-item" data-action="add-col-left">⬅️ 왼쪽에 열 추가</div>
+        <div class="context-menu-item" data-action="add-col-right">➡️ 오른쪽에 열 추가</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="delete-row">❌ 행 삭제</div>
+        <div class="context-menu-item" data-action="delete-col">❌ 열 삭제</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
+        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+    </div>
+
+    <!-- 플로팅 툴바 -->
+    <div class="floating-toolbar" id="floatingToolbar" style="display: none;">
+        <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
+        <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
+        <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
+        <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+</html>
