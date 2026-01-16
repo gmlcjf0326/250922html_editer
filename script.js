@@ -3,7 +3,7 @@ class HTMLLiveEditor {
         this.originalHTML = '';
         this.updateTimeout = null;
         this.selectedElement = null;
-        this.isElementMode = true; // 기본적으로 요소편집 모드
+        this.isElementMode = true;
 
         // 되돌리기/다시실행 시스템
         this.history = [];
@@ -11,8 +11,26 @@ class HTMLLiveEditor {
         this.maxHistorySize = 20;
         this.historyTimeout = null;
 
+        // 드래그 앤 드롭 상태
+        this.isDragging = false;
+        this.draggedElement = null;
+        this.dragStartPos = { x: 0, y: 0 };
+        this.dropTarget = null;
+        this.dropPosition = null;
+
+        // 스타일 패널 상태
+        this.stylePanelOpen = false;
+        this.selectedColorTarget = 'background';
+
+        // AI 설정
+        this.aiSettings = {
+            model: 'gemini',
+            apiKey: ''
+        };
+
         this.initializeElements();
         this.bindEvents();
+        this.loadSavedApiKeys();
     }
 
     initializeElements() {
@@ -22,7 +40,7 @@ class HTMLLiveEditor {
         this.dropZone = document.getElementById('dropZone');
         this.uploadScreen = document.getElementById('uploadScreen');
         this.previewFrame = document.getElementById('previewFrame');
-        this.downloadButton = document.getElementById('downloadButton');
+        this.topButtons = document.getElementById('topButtons');
         this.downloadBtn = document.getElementById('downloadBtn');
         this.undoBtn = document.getElementById('undoBtn');
         this.redoBtn = document.getElementById('redoBtn');
@@ -31,9 +49,31 @@ class HTMLLiveEditor {
         this.contextMenu = document.getElementById('contextMenu');
         this.tableContextMenu = document.getElementById('tableContextMenu');
         this.floatingToolbar = document.getElementById('floatingToolbar');
+
+        // 드래그 관련
+        this.dragGuide = document.getElementById('dragGuide');
+        this.dragGhost = document.getElementById('dragGhost');
+
+        // 스타일 패널
+        this.stylePanel = document.getElementById('stylePanel');
+        this.stylePanelClose = document.getElementById('stylePanelClose');
+
+        // AI 모달
+        this.aiStyleBtn = document.getElementById('aiStyleBtn');
+        this.aiModal = document.getElementById('aiModal');
+        this.aiModalClose = document.getElementById('aiModalClose');
+        this.aiModalCancel = document.getElementById('aiModalCancel');
+        this.aiApplyBtn = document.getElementById('aiApplyBtn');
+        this.apiKeyInput = document.getElementById('apiKeyInput');
+        this.toggleApiKey = document.getElementById('toggleApiKey');
+        this.aiPrompt = document.getElementById('aiPrompt');
+
+        // 토스트
+        this.toastContainer = document.getElementById('toastContainer');
     }
 
     bindEvents() {
+        // 파일 업로드 이벤트
         this.uploadBtn.addEventListener('click', () => this.fileInput.click());
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
 
@@ -41,6 +81,7 @@ class HTMLLiveEditor {
         this.dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
         this.dropZone.addEventListener('drop', (e) => this.handleDrop(e));
 
+        // 기본 버튼 이벤트
         this.downloadBtn.addEventListener('click', () => this.downloadHTML());
         this.undoBtn.addEventListener('click', () => this.undo());
         this.redoBtn.addEventListener('click', () => this.redo());
@@ -56,9 +97,21 @@ class HTMLLiveEditor {
         // 키보드 단축키
         document.addEventListener('keydown', (e) => this.handleKeydown(e));
 
+        // 스타일 패널 이벤트
+        this.stylePanelClose.addEventListener('click', () => this.hideStylePanel());
+        this.bindStylePanelEvents();
+
+        // AI 모달 이벤트
+        this.aiStyleBtn.addEventListener('click', () => this.showAIModal());
+        this.aiModalClose.addEventListener('click', () => this.hideAIModal());
+        this.aiModalCancel.addEventListener('click', () => this.hideAIModal());
+        this.aiApplyBtn.addEventListener('click', () => this.applyAIStyle());
+        this.toggleApiKey.addEventListener('click', () => this.toggleApiKeyVisibility());
+        this.bindAIModalEvents();
+
         // 페이지 새로고침 방지
         window.addEventListener('beforeunload', (e) => {
-            if (this.history.length > 1) { // 초기 상태 이후 변경사항이 있는 경우
+            if (this.history.length > 1) {
                 e.preventDefault();
                 e.returnValue = '편집한 내용이 있습니다. 페이지를 떠나시겠습니까?';
                 return e.returnValue;
@@ -66,6 +119,153 @@ class HTMLLiveEditor {
         });
     }
 
+    // ============== 스타일 패널 이벤트 바인딩 ==============
+    bindStylePanelEvents() {
+        // 배경색
+        const bgColor = document.getElementById('bgColor');
+        const bgColorText = document.getElementById('bgColorText');
+        const bgColorClear = document.getElementById('bgColorClear');
+
+        bgColor.addEventListener('input', (e) => {
+            bgColorText.value = e.target.value;
+            this.applyStyle('backgroundColor', e.target.value);
+        });
+
+        bgColorText.addEventListener('change', (e) => {
+            bgColor.value = e.target.value;
+            this.applyStyle('backgroundColor', e.target.value);
+        });
+
+        bgColorClear.addEventListener('click', () => {
+            this.applyStyle('backgroundColor', '');
+            this.applyStyle('background', '');
+        });
+
+        // 그라데이션
+        document.getElementById('applyGradient').addEventListener('click', () => {
+            const start = document.getElementById('gradientStart').value;
+            const end = document.getElementById('gradientEnd').value;
+            const direction = document.getElementById('gradientDirection').value;
+            this.applyStyle('background', `linear-gradient(${direction}, ${start}, ${end})`);
+        });
+
+        document.getElementById('clearGradient').addEventListener('click', () => {
+            this.applyStyle('background', '');
+        });
+
+        // 텍스트 색상
+        const textColor = document.getElementById('textColor');
+        const textColorText = document.getElementById('textColorText');
+
+        textColor.addEventListener('input', (e) => {
+            textColorText.value = e.target.value;
+            this.applyStyle('color', e.target.value);
+        });
+
+        textColorText.addEventListener('change', (e) => {
+            textColor.value = e.target.value;
+            this.applyStyle('color', e.target.value);
+        });
+
+        // 보더
+        document.getElementById('applyBorder').addEventListener('click', () => {
+            const width = document.getElementById('borderWidth').value;
+            const style = document.getElementById('borderStyle').value;
+            const color = document.getElementById('borderColor').value;
+            this.applyStyle('border', `${width}px ${style} ${color}`);
+        });
+
+        document.getElementById('clearBorder').addEventListener('click', () => {
+            this.applyStyle('border', 'none');
+        });
+
+        // 보더 래디우스
+        const borderRadius = document.getElementById('borderRadius');
+        const borderRadiusValue = document.getElementById('borderRadiusValue');
+
+        borderRadius.addEventListener('input', (e) => {
+            borderRadiusValue.textContent = `${e.target.value}px`;
+            this.applyStyle('borderRadius', `${e.target.value}px`);
+        });
+
+        // 여백 (마진)
+        ['Top', 'Bottom', 'Left', 'Right'].forEach(dir => {
+            document.getElementById(`margin${dir}`).addEventListener('change', (e) => {
+                this.applyStyle(`margin${dir}`, `${e.target.value}px`);
+            });
+        });
+
+        // 패딩
+        ['Top', 'Bottom', 'Left', 'Right'].forEach(dir => {
+            document.getElementById(`padding${dir}`).addEventListener('change', (e) => {
+                this.applyStyle(`padding${dir}`, `${e.target.value}px`);
+            });
+        });
+
+        // 그림자
+        document.getElementById('applyShadow').addEventListener('click', () => {
+            const x = document.getElementById('shadowX').value;
+            const y = document.getElementById('shadowY').value;
+            const blur = document.getElementById('shadowBlur').value;
+            const color = document.getElementById('shadowColor').value;
+            this.applyStyle('boxShadow', `${x}px ${y}px ${blur}px ${this.hexToRgba(color, 0.3)}`);
+        });
+
+        document.getElementById('clearShadow').addEventListener('click', () => {
+            this.applyStyle('boxShadow', 'none');
+        });
+
+        // 폰트 크기
+        const fontSize = document.getElementById('fontSize');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+
+        fontSize.addEventListener('input', (e) => {
+            fontSizeValue.textContent = `${e.target.value}px`;
+            this.applyStyle('fontSize', `${e.target.value}px`);
+        });
+
+        // 컬러 팔레트
+        document.getElementById('colorPalette').addEventListener('click', (e) => {
+            if (e.target.classList.contains('palette-color')) {
+                const color = e.target.dataset.color;
+                this.applyStyle('backgroundColor', color);
+                document.getElementById('bgColor').value = color;
+                document.getElementById('bgColorText').value = color;
+            }
+        });
+
+        // 스타일 프리셋
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.applyStylePreset(btn.dataset.preset);
+            });
+        });
+    }
+
+    // ============== AI 모달 이벤트 바인딩 ==============
+    bindAIModalEvents() {
+        // 모델 선택
+        document.querySelectorAll('input[name="aiModel"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.aiSettings.model = e.target.value;
+                this.loadApiKeyForModel(e.target.value);
+            });
+        });
+
+        // API 키 저장
+        this.apiKeyInput.addEventListener('change', (e) => {
+            this.saveApiKey(this.aiSettings.model, e.target.value);
+        });
+
+        // 빠른 프롬프트
+        document.querySelectorAll('.quick-prompt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.aiPrompt.value = btn.dataset.prompt;
+            });
+        });
+    }
+
+    // ============== 파일 처리 ==============
     handleDragOver(e) {
         e.preventDefault();
         this.dropZone.classList.add('drag-over');
@@ -95,7 +295,7 @@ class HTMLLiveEditor {
 
     processFile(file) {
         if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
-            alert('HTML 파일만 업로드할 수 있습니다.');
+            this.showToast('HTML 파일만 업로드할 수 있습니다.', 'error');
             return;
         }
 
@@ -108,7 +308,7 @@ class HTMLLiveEditor {
         };
 
         reader.onerror = () => {
-            alert('파일을 읽는 중 오류가 발생했습니다.');
+            this.showToast('파일을 읽는 중 오류가 발생했습니다.', 'error');
         };
 
         reader.readAsText(file, 'UTF-8');
@@ -117,10 +317,8 @@ class HTMLLiveEditor {
     loadHTMLToEditor() {
         this.uploadScreen.style.display = 'none';
         this.previewFrame.style.display = 'block';
-        this.downloadButton.style.display = 'block';
-        this.fileInfo.style.display = 'block';
+        this.topButtons.style.display = 'flex';
 
-        // 요소편집 모드는 기본 활성화
         this.modeIndicator.textContent = '🔧 요소편집';
         this.modeIndicator.style.color = '#007bff';
 
@@ -129,79 +327,78 @@ class HTMLLiveEditor {
 
     renderHTML() {
         const iframe = this.previewFrame;
-
-        // iframe을 완전히 새로 로드
         iframe.src = 'about:blank';
 
-        // iframe이 완전히 리셋된 후 새 내용 로드
         iframe.onload = () => {
             try {
                 const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-                // 새로운 document에 HTML 작성
                 doc.open();
                 doc.write(this.originalHTML);
                 doc.close();
 
-                // iframe 로드 완료 대기 및 편집 가능하게 만들기
                 this.waitForDocumentReady(doc, () => {
+                    this.injectEditorStyles(doc);
                     this.makeTextEditable(doc);
                     this.setupEditableListeners(doc);
                     this.setupElementSelection(doc);
-                    // 초기 상태를 히스토리에 저장
+                    this.setupDragAndDrop(doc);
                     this.saveToHistory('파일 로드', true);
 
-                    // 디버깅을 위한 전역 접근 함수 추가
                     window.htmlEditor = this;
-                    console.log('🎯 HTML Live Editor 로드 완료!');
-                    console.log('디버깅: window.htmlEditor 로 에디터 접근 가능');
-                    console.log('유용한 명령어:');
-                    console.log('  - window.htmlEditor.selectedElement : 현재 선택된 요소');
-                    console.log('  - window.htmlEditor.history : 히스토리 목록');
-                    console.log('  - window.htmlEditor.showFixedPositionToolbar() : 고정 위치 툴바 표시');
-                    console.log('  - window.htmlEditor.forceShowToolbar(element) : 특정 요소에 강제 툴바 표시');
+                    console.log('🎯 HTML Live Editor Pro 로드 완료!');
                 });
             } catch (error) {
                 console.error('HTML 렌더링 중 오류:', error);
             } finally {
-                // onload 이벤트 핸들러 제거 (일회성)
                 iframe.onload = null;
             }
         };
     }
 
-    // Document가 완전히 로드될 때까지 대기
-    waitForDocumentReady(doc, callback) {
-        const checkReady = () => {
-            if (doc && doc.body && doc.head && doc.readyState === 'complete') {
-                callback();
-            } else {
-                setTimeout(checkReady, 50);
-            }
-        };
-
-        // 즉시 확인 후 준비되지 않았으면 재시도
-        if (doc && doc.body && doc.head) {
-            callback();
-        } else {
-            setTimeout(checkReady, 50);
-        }
-    }
-
-    makeTextEditable(doc) {
-        // 안전성 검사: doc와 필요한 요소들이 존재하는지 확인
-        if (!doc || !doc.head || !doc.body) {
-            console.error('makeTextEditable: 유효하지 않은 document 또는 누락된 요소:', {
-                doc: !!doc,
-                head: !!doc?.head,
-                body: !!doc?.body
-            });
-            return;
-        }
-
-        // 편집 가능한 스타일 추가
+    // iframe에 에디터 스타일 주입
+    injectEditorStyles(doc) {
         const style = doc.createElement('style');
+        style.id = 'editor-styles';
         style.textContent = `
+            .element-selected {
+                outline: 2px solid #007bff !important;
+                outline-offset: 2px;
+            }
+            .element-hover {
+                outline: 1px dashed #007bff !important;
+                outline-offset: 1px;
+            }
+            .element-dragging {
+                opacity: 0.5 !important;
+                outline: 2px dashed #007bff !important;
+            }
+            .drop-target-highlight {
+                background: rgba(0, 123, 255, 0.1) !important;
+                outline: 2px dashed #007bff !important;
+            }
+            .drop-indicator-before::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #007bff, #00d4ff);
+                border-radius: 2px;
+                z-index: 10000;
+            }
+            .drop-indicator-after::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #007bff, #00d4ff);
+                border-radius: 2px;
+                z-index: 10000;
+            }
             .editable-text {
                 position: relative;
                 padding: 2px 4px;
@@ -221,23 +418,671 @@ class HTMLLiveEditor {
                 outline: 2px solid rgba(102, 126, 234, 0.5);
                 box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
-            .editable-text.editing {
-                background-color: rgba(102, 126, 234, 0.2);
-                outline: 2px solid #667eea;
-            }
         `;
         doc.head.appendChild(style);
+    }
 
-        // 텍스트 노드를 편집 가능하게 변환
+    waitForDocumentReady(doc, callback) {
+        const checkReady = () => {
+            if (doc && doc.body && doc.head && doc.readyState === 'complete') {
+                callback();
+            } else {
+                setTimeout(checkReady, 50);
+            }
+        };
+
+        if (doc && doc.body && doc.head) {
+            callback();
+        } else {
+            setTimeout(checkReady, 50);
+        }
+    }
+
+    // ============== 드래그 앤 드롭 ==============
+    setupDragAndDrop(doc) {
+        if (!doc || !doc.body) return;
+
+        // 마우스 다운 이벤트 (드래그 시작)
+        doc.body.addEventListener('mousedown', (e) => {
+            if (!this.isElementMode) return;
+            if (e.button !== 0) return; // 좌클릭만
+
+            const target = this.findEditableTarget(e.target);
+            if (!target) return;
+
+            // 텍스트 편집 중이면 드래그 시작하지 않음
+            if (e.target.classList.contains('editable-text') && e.target.isContentEditable) {
+                return;
+            }
+
+            this.dragStartPos = { x: e.clientX, y: e.clientY };
+            this.potentialDragElement = target;
+
+            // 드래그 시작 대기 (100ms 후 드래그 시작)
+            this.dragStartTimeout = setTimeout(() => {
+                this.startDrag(target, e);
+            }, 150);
+        });
+
+        // 마우스 이동 이벤트
+        doc.body.addEventListener('mousemove', (e) => {
+            // 드래그 시작 전 움직임이 작으면 무시
+            if (this.potentialDragElement && !this.isDragging) {
+                const dx = Math.abs(e.clientX - this.dragStartPos.x);
+                const dy = Math.abs(e.clientY - this.dragStartPos.y);
+                if (dx < 5 && dy < 5) return;
+
+                clearTimeout(this.dragStartTimeout);
+                this.startDrag(this.potentialDragElement, e);
+            }
+
+            if (this.isDragging) {
+                this.handleDragMove(e, doc);
+            }
+        });
+
+        // 마우스 업 이벤트 (드래그 종료)
+        doc.body.addEventListener('mouseup', (e) => {
+            clearTimeout(this.dragStartTimeout);
+            this.potentialDragElement = null;
+
+            if (this.isDragging) {
+                this.endDrag(doc);
+            }
+        });
+
+        // 마우스가 iframe 밖으로 나갈 때
+        doc.body.addEventListener('mouseleave', () => {
+            if (this.isDragging) {
+                // 드래그 유지하되 가이드만 숨김
+                this.dragGuide.style.display = 'none';
+            }
+        });
+    }
+
+    startDrag(element, e) {
+        if (this.isDragging) return;
+
+        this.isDragging = true;
+        this.draggedElement = element;
+
+        // 드래그 중인 요소 스타일 변경
+        element.classList.add('element-dragging');
+
+        // 고스트 요소 표시
+        this.dragGhost.textContent = element.tagName.toLowerCase() + ': ' +
+            (element.textContent.substring(0, 30) || '(비어있음)');
+        this.dragGhost.style.display = 'block';
+
+        this.updateGhostPosition(e);
+
+        console.log('🎯 드래그 시작:', element.tagName);
+    }
+
+    handleDragMove(e, doc) {
+        if (!this.isDragging || !this.draggedElement) return;
+
+        // 고스트 위치 업데이트
+        this.updateGhostPosition(e);
+
+        // iframe 내 좌표 계산
+        const iframe = this.previewFrame;
+        const iframeRect = iframe.getBoundingClientRect();
+        const x = e.clientX;
+        const y = e.clientY;
+
+        // 드롭 타겟 찾기
+        const elementsAtPoint = doc.elementsFromPoint(x, y);
+        let newDropTarget = null;
+        let newDropPosition = null;
+
+        for (const el of elementsAtPoint) {
+            if (el === this.draggedElement) continue;
+            if (el.classList.contains('editable-text')) continue;
+            if (['HTML', 'HEAD', 'BODY', 'SCRIPT', 'STYLE'].includes(el.tagName)) continue;
+
+            // 유효한 드롭 타겟 찾음
+            const rect = el.getBoundingClientRect();
+            const relativeY = y - rect.top;
+            const threshold = rect.height / 2;
+
+            newDropTarget = el;
+            newDropPosition = relativeY < threshold ? 'before' : 'after';
+            break;
+        }
+
+        // 이전 하이라이트 제거
+        if (this.dropTarget && this.dropTarget !== newDropTarget) {
+            this.dropTarget.classList.remove('drop-target-highlight', 'drop-indicator-before', 'drop-indicator-after');
+        }
+
+        // 새 하이라이트 적용
+        if (newDropTarget) {
+            this.dropTarget = newDropTarget;
+            this.dropPosition = newDropPosition;
+
+            newDropTarget.classList.add('drop-target-highlight');
+
+            // 드롭 가이드 라인 표시
+            this.showDropGuide(newDropTarget, newDropPosition, iframeRect);
+        } else {
+            this.dragGuide.style.display = 'none';
+        }
+    }
+
+    showDropGuide(target, position, iframeRect) {
+        const rect = target.getBoundingClientRect();
+
+        this.dragGuide.style.display = 'block';
+        this.dragGuide.style.left = (iframeRect.left + rect.left) + 'px';
+        this.dragGuide.style.width = rect.width + 'px';
+
+        if (position === 'before') {
+            this.dragGuide.style.top = (iframeRect.top + rect.top - 2) + 'px';
+            this.dragGuide.querySelector('.drag-guide-text').textContent = '↑ 이 위치에 삽입';
+        } else {
+            this.dragGuide.style.top = (iframeRect.top + rect.bottom - 2) + 'px';
+            this.dragGuide.querySelector('.drag-guide-text').textContent = '↓ 이 위치에 삽입';
+        }
+    }
+
+    updateGhostPosition(e) {
+        const iframe = this.previewFrame;
+        const iframeRect = iframe.getBoundingClientRect();
+
+        this.dragGhost.style.left = (iframeRect.left + e.clientX + 15) + 'px';
+        this.dragGhost.style.top = (iframeRect.top + e.clientY + 15) + 'px';
+    }
+
+    endDrag(doc) {
+        if (!this.isDragging) return;
+
+        // 드롭 실행
+        if (this.dropTarget && this.draggedElement && this.dropTarget !== this.draggedElement) {
+            this.performDrop();
+        }
+
+        // 정리
+        if (this.draggedElement) {
+            this.draggedElement.classList.remove('element-dragging');
+        }
+
+        if (this.dropTarget) {
+            this.dropTarget.classList.remove('drop-target-highlight', 'drop-indicator-before', 'drop-indicator-after');
+        }
+
+        this.dragGuide.style.display = 'none';
+        this.dragGhost.style.display = 'none';
+
+        this.isDragging = false;
+        this.draggedElement = null;
+        this.dropTarget = null;
+        this.dropPosition = null;
+
+        console.log('🎯 드래그 종료');
+    }
+
+    performDrop() {
+        if (!this.draggedElement || !this.dropTarget) return;
+
+        const parent = this.dropTarget.parentNode;
+
+        if (this.dropPosition === 'before') {
+            parent.insertBefore(this.draggedElement, this.dropTarget);
+        } else {
+            parent.insertBefore(this.draggedElement, this.dropTarget.nextSibling);
+        }
+
+        // 요소 다시 선택
+        this.selectElement(this.draggedElement);
+        this.saveToHistory('요소 이동', true);
+        this.showToast('요소가 이동되었습니다.', 'success');
+
+        console.log('✅ 드롭 완료');
+    }
+
+    // ============== 스타일 패널 ==============
+    showStylePanel() {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        this.stylePanel.style.display = 'block';
+        this.stylePanelOpen = true;
+        this.loadCurrentStyles();
+    }
+
+    hideStylePanel() {
+        this.stylePanel.style.display = 'none';
+        this.stylePanelOpen = false;
+    }
+
+    loadCurrentStyles() {
+        if (!this.selectedElement) return;
+
+        const computed = window.getComputedStyle(this.selectedElement);
+        const style = this.selectedElement.style;
+
+        // 배경색
+        const bgColor = style.backgroundColor || computed.backgroundColor;
+        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+            const hex = this.rgbToHex(bgColor);
+            document.getElementById('bgColor').value = hex;
+            document.getElementById('bgColorText').value = hex;
+        }
+
+        // 텍스트 색상
+        const textColor = style.color || computed.color;
+        if (textColor) {
+            const hex = this.rgbToHex(textColor);
+            document.getElementById('textColor').value = hex;
+            document.getElementById('textColorText').value = hex;
+        }
+
+        // 보더 래디우스
+        const borderRadius = parseInt(style.borderRadius || computed.borderRadius) || 0;
+        document.getElementById('borderRadius').value = borderRadius;
+        document.getElementById('borderRadiusValue').textContent = `${borderRadius}px`;
+
+        // 폰트 크기
+        const fontSize = parseInt(style.fontSize || computed.fontSize) || 16;
+        document.getElementById('fontSize').value = fontSize;
+        document.getElementById('fontSizeValue').textContent = `${fontSize}px`;
+
+        // 여백
+        document.getElementById('marginTop').value = parseInt(style.marginTop || computed.marginTop) || 0;
+        document.getElementById('marginBottom').value = parseInt(style.marginBottom || computed.marginBottom) || 0;
+        document.getElementById('marginLeft').value = parseInt(style.marginLeft || computed.marginLeft) || 0;
+        document.getElementById('marginRight').value = parseInt(style.marginRight || computed.marginRight) || 0;
+
+        // 패딩
+        document.getElementById('paddingTop').value = parseInt(style.paddingTop || computed.paddingTop) || 0;
+        document.getElementById('paddingBottom').value = parseInt(style.paddingBottom || computed.paddingBottom) || 0;
+        document.getElementById('paddingLeft').value = parseInt(style.paddingLeft || computed.paddingLeft) || 0;
+        document.getElementById('paddingRight').value = parseInt(style.paddingRight || computed.paddingRight) || 0;
+    }
+
+    applyStyle(property, value) {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        this.selectedElement.style[property] = value;
+        this.saveToHistory(`스타일 변경: ${property}`, false);
+    }
+
+    applyStylePreset(preset) {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const presets = {
+            'glassmorphism': {
+                background: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+            },
+            'neumorphism': {
+                background: '#e0e5ec',
+                borderRadius: '20px',
+                boxShadow: '9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5)',
+                border: 'none'
+            },
+            'flat': {
+                background: '#3498db',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                boxShadow: 'none'
+            },
+            'gradient-card': {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#ffffff',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(102, 126, 234, 0.4)',
+                border: 'none'
+            },
+            'shadow-depth': {
+                background: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                border: 'none'
+            },
+            'outline': {
+                background: 'transparent',
+                border: '2px solid #333333',
+                borderRadius: '8px',
+                boxShadow: 'none'
+            }
+        };
+
+        const styles = presets[preset];
+        if (styles) {
+            Object.entries(styles).forEach(([prop, val]) => {
+                this.selectedElement.style[prop] = val;
+            });
+            this.saveToHistory(`프리셋 적용: ${preset}`, true);
+            this.showToast(`${preset} 스타일이 적용되었습니다.`, 'success');
+        }
+    }
+
+    // ============== AI 스타일 변환 ==============
+    showAIModal() {
+        this.aiModal.style.display = 'flex';
+        this.loadApiKeyForModel(this.aiSettings.model);
+    }
+
+    hideAIModal() {
+        this.aiModal.style.display = 'none';
+    }
+
+    toggleApiKeyVisibility() {
+        const input = this.apiKeyInput;
+        if (input.type === 'password') {
+            input.type = 'text';
+            this.toggleApiKey.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            this.toggleApiKey.textContent = '👁';
+        }
+    }
+
+    saveApiKey(model, key) {
+        localStorage.setItem(`ai_api_key_${model}`, key);
+        this.aiSettings.apiKey = key;
+    }
+
+    loadApiKeyForModel(model) {
+        const key = localStorage.getItem(`ai_api_key_${model}`) || '';
+        this.apiKeyInput.value = key;
+        this.aiSettings.apiKey = key;
+    }
+
+    loadSavedApiKeys() {
+        this.loadApiKeyForModel(this.aiSettings.model);
+    }
+
+    async applyAIStyle() {
+        const prompt = this.aiPrompt.value.trim();
+        const apiKey = this.apiKeyInput.value.trim();
+        const model = this.aiSettings.model;
+        const scope = document.querySelector('input[name="aiScope"]:checked').value;
+
+        if (!prompt) {
+            this.showToast('스타일 설명을 입력해주세요.', 'warning');
+            return;
+        }
+
+        if (!apiKey) {
+            this.showToast('API 키를 입력해주세요.', 'warning');
+            return;
+        }
+
+        if (scope === 'selected' && !this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        // 로딩 상태
+        const btnText = this.aiApplyBtn.querySelector('.btn-text');
+        const btnLoading = this.aiApplyBtn.querySelector('.btn-loading');
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline';
+        this.aiApplyBtn.disabled = true;
+
+        try {
+            const iframe = this.previewFrame;
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            let targetHTML;
+            if (scope === 'selected') {
+                targetHTML = this.selectedElement.outerHTML;
+            } else {
+                targetHTML = doc.body.innerHTML;
+            }
+
+            const cssResponse = await this.callAIAPI(model, apiKey, prompt, targetHTML);
+
+            if (cssResponse) {
+                this.applyAIGeneratedStyles(doc, cssResponse, scope);
+                this.saveToHistory('AI 스타일 적용', true);
+                this.showToast('AI 스타일이 적용되었습니다!', 'success');
+                this.hideAIModal();
+            }
+
+        } catch (error) {
+            console.error('AI API 오류:', error);
+            this.showToast(`오류: ${error.message}`, 'error');
+        } finally {
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+            this.aiApplyBtn.disabled = false;
+        }
+    }
+
+    async callAIAPI(model, apiKey, prompt, html) {
+        const systemPrompt = `당신은 웹 디자인 전문가입니다. 사용자가 요청하는 스타일로 HTML 요소의 CSS를 생성해주세요.
+
+규칙:
+1. 반드시 유효한 CSS만 응답하세요.
+2. 각 스타일 규칙은 인라인 스타일 형식으로 작성하세요.
+3. 응답은 JSON 형식으로, 각 CSS 선택자와 스타일을 포함하세요.
+4. 예시 형식:
+{
+    "styles": [
+        {"selector": "body", "css": "background-color: #1a1a2e; color: #eee;"},
+        {"selector": "h1", "css": "color: #00d4ff; font-size: 2.5rem;"},
+        {"selector": "button", "css": "background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 8px;"}
+    ]
+}
+
+현재 HTML:
+${html.substring(0, 3000)}
+
+사용자 요청: ${prompt}`;
+
+        let response;
+
+        if (model === 'gemini') {
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: systemPrompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2048
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            return this.parseAIResponse(text);
+
+        } else if (model === 'claude') {
+            response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 2048,
+                    messages: [{ role: 'user', content: systemPrompt }]
+                })
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+
+            const text = data.content?.[0]?.text || '';
+            return this.parseAIResponse(text);
+
+        } else if (model === 'gpt') {
+            response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [
+                        { role: 'system', content: '당신은 웹 디자인 전문가입니다.' },
+                        { role: 'user', content: systemPrompt }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 2048
+                })
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+
+            const text = data.choices?.[0]?.message?.content || '';
+            return this.parseAIResponse(text);
+        }
+
+        return null;
+    }
+
+    parseAIResponse(text) {
+        try {
+            // JSON 블록 추출
+            const jsonMatch = text.match(/\{[\s\S]*"styles"[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+
+            // JSON이 아닌 경우 기본 파싱 시도
+            const styles = [];
+            const cssBlocks = text.match(/([a-z0-9-]+)\s*\{([^}]+)\}/gi);
+            if (cssBlocks) {
+                cssBlocks.forEach(block => {
+                    const match = block.match(/([a-z0-9-]+)\s*\{([^}]+)\}/i);
+                    if (match) {
+                        styles.push({
+                            selector: match[1].trim(),
+                            css: match[2].trim().replace(/\n/g, ' ')
+                        });
+                    }
+                });
+            }
+
+            return styles.length > 0 ? { styles } : null;
+        } catch (e) {
+            console.error('AI 응답 파싱 오류:', e);
+            return null;
+        }
+    }
+
+    applyAIGeneratedStyles(doc, response, scope) {
+        if (!response || !response.styles) return;
+
+        response.styles.forEach(({ selector, css }) => {
+            try {
+                let elements;
+
+                if (scope === 'selected' && this.selectedElement) {
+                    // 선택된 요소 내에서만 찾기
+                    if (selector === 'body' || selector === '*') {
+                        elements = [this.selectedElement];
+                    } else {
+                        elements = this.selectedElement.querySelectorAll(selector);
+                        if (elements.length === 0 && this.selectedElement.matches(selector)) {
+                            elements = [this.selectedElement];
+                        }
+                    }
+                } else {
+                    // 전체 문서에서 찾기
+                    if (selector === 'body') {
+                        elements = [doc.body];
+                    } else {
+                        elements = doc.querySelectorAll(selector);
+                    }
+                }
+
+                if (elements && elements.length > 0) {
+                    elements.forEach(el => {
+                        // CSS 문자열을 개별 속성으로 분리하여 적용
+                        const properties = css.split(';').filter(p => p.trim());
+                        properties.forEach(prop => {
+                            const [name, value] = prop.split(':').map(s => s.trim());
+                            if (name && value) {
+                                // CSS 속성명을 camelCase로 변환
+                                const camelName = name.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                                el.style[camelName] = value;
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.warn(`스타일 적용 실패 (${selector}):`, e);
+            }
+        });
+    }
+
+    // ============== 유틸리티 ==============
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    rgbToHex(rgb) {
+        if (rgb.startsWith('#')) return rgb;
+
+        const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (match) {
+            const r = parseInt(match[1]).toString(16).padStart(2, '0');
+            const g = parseInt(match[2]).toString(16).padStart(2, '0');
+            const b = parseInt(match[3]).toString(16).padStart(2, '0');
+            return `#${r}${g}${b}`;
+        }
+        return '#000000';
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        const icon = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        }[type] || 'ℹ️';
+
+        toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        this.toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // ============== 텍스트 편집 ==============
+    makeTextEditable(doc) {
+        if (!doc || !doc.head || !doc.body) return;
+
         this.processTextNodes(doc.body);
     }
 
     processTextNodes(element) {
-        // 안전성 검사: element가 유효한지 확인
-        if (!element || !element.ownerDocument) {
-            console.error('processTextNodes: 유효하지 않은 element:', element);
-            return;
-        }
+        if (!element || !element.ownerDocument) return;
 
         const doc = element.ownerDocument;
         const walker = doc.createTreeWalker(
@@ -269,7 +1114,7 @@ class HTMLLiveEditor {
             textNodes.push(node);
         }
 
-        textNodes.forEach((textNode, index) => {
+        textNodes.forEach((textNode) => {
             const text = textNode.textContent;
             if (text.trim()) {
                 const span = textNode.ownerDocument.createElement('span');
@@ -284,10 +1129,7 @@ class HTMLLiveEditor {
     }
 
     setupEditableListeners(doc) {
-        if (!doc) {
-            console.error('setupEditableListeners: 유효하지 않은 document');
-            return;
-        }
+        if (!doc) return;
 
         const editableElements = doc.querySelectorAll('.editable-text');
 
@@ -308,21 +1150,18 @@ class HTMLLiveEditor {
             });
 
             element.addEventListener('input', () => {
-                // 텍스트 변경 시 디바운스된 히스토리 저장
-                console.log('텍스트 변경됨:', element.textContent);
                 this.saveToHistory('텍스트 편집', false);
             });
         });
     }
 
-    // 되돌리기/다시실행 시스템
+    // ============== 히스토리 시스템 ==============
     saveToHistory(actionName, immediate = true) {
-        // 기본적으로 즉시 저장으로 변경하여 안정성 향상
         if (!immediate) {
             clearTimeout(this.historyTimeout);
             this.historyTimeout = setTimeout(() => {
                 this.doSaveToHistory(actionName);
-            }, 200); // 디바운스 시간 단축
+            }, 200);
         } else {
             this.doSaveToHistory(actionName);
         }
@@ -332,16 +1171,11 @@ class HTMLLiveEditor {
         const iframe = this.previewFrame;
         const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-        // 선택된 요소의 식별자 저장 (CSS 선택자 형태로)
         let selectedElementSelector = null;
         if (this.selectedElement) {
             selectedElementSelector = this.getElementSelector(this.selectedElement);
-            console.log('히스토리 저장 - 선택된 요소 선택자:', selectedElementSelector);
-        } else {
-            console.log('히스토리 저장 - 선택된 요소 없음');
         }
 
-        // 현재 DOM 상태 저장
         const snapshot = {
             html: doc.documentElement.outerHTML,
             action: actionName,
@@ -349,109 +1183,65 @@ class HTMLLiveEditor {
             selectedElementSelector: selectedElementSelector
         };
 
-        // 현재 위치 이후의 히스토리 삭제 (새 브랜치 생성)
         this.history = this.history.slice(0, this.historyIndex + 1);
-
-        // 새 스냅샷 추가
         this.history.push(snapshot);
         this.historyIndex = this.history.length - 1;
 
-        // 최대 크기 초과 시 오래된 항목 제거
         if (this.history.length > this.maxHistorySize) {
             this.history.shift();
             this.historyIndex--;
         }
 
         this.updateHistoryButtons();
-        console.log(`히스토리 저장: ${actionName} (${this.historyIndex + 1}/${this.history.length})`);
     }
 
-    // 요소의 고유한 CSS 선택자 생성 (개선된 버전)
     getElementSelector(element) {
         if (!element || !element.parentNode) return null;
 
         const doc = element.ownerDocument;
 
-        // 요소에 ID가 있으면 ID 사용
         if (element.id) {
             return `#${element.id}`;
         }
 
-        // 다양한 방식으로 선택자 생성 시도
         const selectors = [];
 
-        // 방법 1: 클래스명 기반 선택자
         if (element.className) {
             const classSelector = this.generateClassBasedSelector(element);
             if (classSelector) selectors.push(classSelector);
         }
 
-        // 방법 2: 텍스트 내용 기반 선택자 (고유한 텍스트인 경우)
-        const textSelector = this.generateTextBasedSelector(element);
-        if (textSelector) selectors.push(textSelector);
-
-        // 방법 3: 속성 기반 선택자
         const attrSelector = this.generateAttributeBasedSelector(element);
         if (attrSelector) selectors.push(attrSelector);
 
-        // 방법 4: 기존 방식 (태그 + nth-of-type)
         const pathSelector = this.generatePathBasedSelector(element);
         if (pathSelector) selectors.push(pathSelector);
 
-        // 각 선택자의 유효성 검증 및 반환
         for (const selector of selectors) {
             try {
                 const found = doc.querySelector(selector);
                 if (found === element) {
-                    console.log('선택자 생성 성공:', selector);
                     return selector;
                 }
             } catch (e) {
-                console.warn('유효하지 않은 선택자:', selector, e);
+                continue;
             }
         }
 
-        console.warn('선택자 생성 실패:', element);
-        return pathSelector; // 최후의 수단
+        return pathSelector;
     }
 
-    // 클래스 기반 선택자 생성
     generateClassBasedSelector(element) {
         if (!element.className) return null;
 
         const classes = Array.from(element.classList)
-            .filter(cls => !cls.startsWith('element-') && !cls.startsWith('editable-'));
+            .filter(cls => !cls.startsWith('element-') && !cls.startsWith('editable-') && !cls.startsWith('drop-'));
 
         if (classes.length === 0) return null;
 
         return element.tagName.toLowerCase() + '.' + classes.join('.');
     }
 
-    // 텍스트 기반 선택자 생성
-    generateTextBasedSelector(element) {
-        const text = element.textContent.trim();
-        if (text.length < 3 || text.length > 50) return null;
-
-        // 특수 문자 이스케이프
-        const escapedText = text.replace(/['"\\]/g, '\\$&');
-        const doc = element.ownerDocument;
-
-        // 동일한 텍스트를 가진 요소가 유일한지 확인
-        const selector = `${element.tagName.toLowerCase()}[textContent="${escapedText}"]`;
-        try {
-            const matches = doc.querySelectorAll(element.tagName.toLowerCase());
-            const uniqueMatch = Array.from(matches).filter(el => el.textContent.trim() === text);
-            if (uniqueMatch.length === 1) {
-                return selector;
-            }
-        } catch (e) {
-            return null;
-        }
-
-        return null;
-    }
-
-    // 속성 기반 선택자 생성
     generateAttributeBasedSelector(element) {
         const attributes = ['data-id', 'name', 'title', 'alt', 'href', 'src'];
 
@@ -474,7 +1264,6 @@ class HTMLLiveEditor {
         return null;
     }
 
-    // 경로 기반 선택자 생성 (기존 방식)
     generatePathBasedSelector(element) {
         const doc = element.ownerDocument;
         const path = [];
@@ -483,7 +1272,6 @@ class HTMLLiveEditor {
         while (current && current !== doc.body && current.parentNode) {
             let selector = current.tagName.toLowerCase();
 
-            // 같은 태그의 형제 요소들 중 몇 번째인지 계산
             const siblings = Array.from(current.parentNode.children);
             const sameTagSiblings = siblings.filter(sibling => sibling.tagName === current.tagName);
 
@@ -499,115 +1287,17 @@ class HTMLLiveEditor {
         return path.length > 0 ? path.join(' > ') : null;
     }
 
-    // 요소 복원을 위한 강력한 대기 함수
-    waitForElementRestoration(doc, selector) {
-        if (!selector || !doc) return;
-
-        let attempts = 0;
-        const maxAttempts = 10; // 최대 2초 대기 (200ms * 10)
-
-        const tryRestore = () => {
-            attempts++;
-            console.log(`선택 복원 시도 ${attempts}/${maxAttempts}:`, selector);
-
-            try {
-                const element = doc.querySelector(selector);
-                if (element) {
-                    // 요소를 찾았지만 렌더링이 완료되었는지 확인
-                    const rect = element.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        // 요소가 완전히 렌더링됨
-                        setTimeout(() => {
-                            this.restoreElementSelection(doc, selector);
-                        }, 100); // 추가 100ms 대기 후 선택
-                        return;
-                    }
-                }
-
-                // 요소를 찾지 못했거나 아직 렌더링되지 않음
-                if (attempts < maxAttempts) {
-                    setTimeout(tryRestore, 200);
-                } else {
-                    console.warn('선택 복원 최종 실패:', selector);
-                }
-            } catch (error) {
-                console.error('선택 복원 시도 중 오류:', error);
-                if (attempts < maxAttempts) {
-                    setTimeout(tryRestore, 200);
-                }
-            }
-        };
-
-        // 첫 번째 시도
-        setTimeout(tryRestore, 200);
-    }
-
-    // 저장된 선택자로 요소 선택 복원
-    restoreElementSelection(doc, selector) {
-        if (!selector || !doc) return;
-
-        try {
-            // CSS 선택자로 요소 찾기
-            const element = doc.querySelector(selector);
-            if (element) {
-                console.log('선택 복원 성공 - 요소 선택 중:', selector);
-                // 요소 선택 및 툴바 표시
-                this.selectElement(element);
-                console.log('선택 상태 복원 완료:', selector);
-            } else {
-                console.log('선택 복원 실패: 요소를 찾을 수 없음:', selector);
-            }
-        } catch (error) {
-            console.error('선택 복원 중 오류:', error, 'selector:', selector);
-        }
-    }
-
-    // 모든 DOM 참조 완전 정리 (히스토리 복원 전)
-    clearAllDOMReferences() {
-        console.log('DOM 참조 정리 중...');
-
-        // 1. 선택된 요소 참조 정리
-        if (this.selectedElement) {
-            // 안전하게 클래스 제거 시도
-            try {
-                this.selectedElement.classList.remove('element-selected');
-            } catch (e) {
-                console.log('이전 요소 클래스 제거 실패 (정상):', e);
-            }
-            this.selectedElement = null;
-        }
-
-        // 2. 컨텍스트 메뉴 타겟 참조 정리
-        this.contextMenuTarget = null;
-
-        // 3. 모든 UI 요소 숨기기
-        this.hideFloatingToolbar();
-        this.hideContextualMenus();
-
-        // 4. 기타 상태 초기화
-        console.log('DOM 참조 정리 완료');
-    }
-
-
     undo() {
         if (this.historyIndex > 0) {
             this.historyIndex--;
-            console.log(`🔄 되돌리기 시작: ${this.history[this.historyIndex].action} (${this.historyIndex + 1}/${this.history.length})`);
-            console.log('복원할 선택자:', this.history[this.historyIndex].selectedElementSelector);
             this.restoreFromHistory();
-        } else {
-            console.log('되돌리기: 더 이상 되돌릴 수 없음');
         }
     }
 
     redo() {
         if (this.historyIndex < this.history.length - 1) {
             this.historyIndex++;
-            console.log(`🔄 다시실행 시작: ${this.history[this.historyIndex].action} (${this.historyIndex + 1}/${this.history.length})`);
-            console.log('복원할 선택자:', this.history[this.historyIndex].selectedElementSelector);
             this.restoreFromHistory();
-        } else {
-            console.log('다시실행: 더 이상 다시실행할 수 없음');
         }
     }
 
@@ -617,35 +1307,38 @@ class HTMLLiveEditor {
             const iframe = this.previewFrame;
 
             try {
-                // 1단계: 모든 이전 DOM 참조 완전 정리
-                console.log('🧹 1단계: DOM 참조 정리');
                 this.clearAllDOMReferences();
 
-                // 2단계: iframe 리셋 및 로드
-                console.log('🔄 2단계: iframe 리셋 및 로드');
                 const doc = await this.resetAndLoadIframe(iframe, snapshot.html);
 
-                // 3단계: 이벤트 리스너 설정
-                console.log('⚙️ 3단계: 이벤트 리스너 설정');
                 await this.setupAllEventListeners(doc);
 
-                // 4단계: 툴바 복원
-                console.log('🎯 4단계: 툴바 복원');
                 await this.restoreToolbarWithRetry(doc, snapshot.selectedElementSelector);
 
-                // 5단계: 최종 정리
-                console.log('✅ 히스토리 복원 완료');
                 this.hideContextualMenus();
                 this.updateHistoryButtons();
 
             } catch (error) {
-                console.error('❌ 히스토리 복원 실패:', error);
+                console.error('히스토리 복원 실패:', error);
                 this.updateHistoryButtons();
             }
         }
     }
 
-    // iframe 리셋 및 HTML 로드 (Promise 기반)
+    clearAllDOMReferences() {
+        if (this.selectedElement) {
+            try {
+                this.selectedElement.classList.remove('element-selected');
+            } catch (e) {}
+            this.selectedElement = null;
+        }
+
+        this.contextMenuTarget = null;
+        this.hideFloatingToolbar();
+        this.hideContextualMenus();
+        this.hideStylePanel();
+    }
+
     resetAndLoadIframe(iframe, html) {
         return new Promise((resolve, reject) => {
             iframe.src = 'about:blank';
@@ -654,14 +1347,12 @@ class HTMLLiveEditor {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-                    // HTML 작성
                     doc.open();
                     doc.write(html);
                     doc.close();
 
-                    // DOM이 완전히 준비될 때까지 대기
                     this.waitForDocumentReady(doc, () => {
-                        iframe.onload = null; // 이벤트 핸들러 제거
+                        iframe.onload = null;
                         resolve(doc);
                     });
                 } catch (error) {
@@ -670,7 +1361,6 @@ class HTMLLiveEditor {
                 }
             };
 
-            // 타임아웃 설정 (5초)
             setTimeout(() => {
                 iframe.onload = null;
                 reject(new Error('iframe 로드 타임아웃'));
@@ -678,27 +1368,23 @@ class HTMLLiveEditor {
         });
     }
 
-    // 모든 이벤트 리스너 설정 (Promise 기반)
     setupAllEventListeners(doc) {
         return new Promise((resolve) => {
             try {
+                this.injectEditorStyles(doc);
                 this.makeTextEditable(doc);
                 this.setupEditableListeners(doc);
                 this.setupElementSelection(doc);
+                this.setupDragAndDrop(doc);
 
-                // 이벤트 리스너 설정 완료 후 약간의 지연
-                setTimeout(() => {
-                    console.log('이벤트 리스너 설정 완료');
-                    resolve();
-                }, 100);
+                setTimeout(() => resolve(), 100);
             } catch (error) {
                 console.error('이벤트 리스너 설정 오류:', error);
-                resolve(); // 오류가 있어도 계속 진행
+                resolve();
             }
         });
     }
 
-    // 재시도 로직이 포함된 툴바 복원 (Promise 기반)
     restoreToolbarWithRetry(doc, originalSelector) {
         return new Promise((resolve) => {
             let attempts = 0;
@@ -706,73 +1392,36 @@ class HTMLLiveEditor {
 
             const attemptRestore = () => {
                 attempts++;
-                console.log(`툴바 복원 시도 ${attempts}/${maxAttempts}`);
 
                 const success = this.attemptToolbarRestore(doc, originalSelector);
 
                 if (success || attempts >= maxAttempts) {
-                    console.log(success ? '툴바 복원 성공' : '툴바 복원 최종 실패 (계속 진행)');
                     resolve();
                 } else {
-                    // 500ms 후 재시도
                     setTimeout(attemptRestore, 500);
                 }
             };
 
-            // 첫 시도 전 300ms 대기 (DOM 안정화)
             setTimeout(attemptRestore, 300);
         });
     }
 
-    // 다단계 백업을 포함한 툴바 복원 시도
     attemptToolbarRestore(doc, originalSelector) {
-        console.log('📍 툴바 복원 시도 시작:', originalSelector);
-
-        // 방법 1: CSS 선택자로 정확한 요소 찾기
         let selectedElement = this.findElementBySelector(doc, originalSelector);
         if (selectedElement) {
-            console.log('✅ 방법 1 성공: CSS 선택자');
             this.selectElement(selectedElement);
             return true;
         }
 
-        // 방법 2: 텍스트 기반 매칭
-        selectedElement = this.findElementByText(doc, originalSelector);
-        if (selectedElement) {
-            console.log('✅ 방법 2 성공: 텍스트 매칭');
-            this.selectElement(selectedElement);
-            return true;
-        }
-
-        // 방법 3: 위치 기반 선택 (첫 번째로 보이는 요소)
         selectedElement = this.findFirstVisibleElement(doc);
         if (selectedElement) {
-            console.log('✅ 방법 3 성공: 첫 번째 보이는 요소');
             this.selectElement(selectedElement);
             return true;
         }
 
-        // 방법 4: 타입별 우선순위 선택
-        selectedElement = this.findElementByPriority(doc);
-        if (selectedElement) {
-            console.log('✅ 방법 4 성공: 우선순위 요소');
-            this.selectElement(selectedElement);
-            return true;
-        }
-
-        // 방법 5: 최후 수단 - 아무 요소라도
-        selectedElement = this.findAnyElement(doc);
-        if (selectedElement) {
-            console.log('⚠️ 방법 5 성공: 아무 요소');
-            this.selectElement(selectedElement);
-            return true;
-        }
-
-        console.log('❌ 모든 방법 실패');
         return false;
     }
 
-    // CSS 선택자로 요소 찾기
     findElementBySelector(doc, selector) {
         if (!selector) return null;
 
@@ -781,38 +1430,10 @@ class HTMLLiveEditor {
             if (element && this.isElementVisible(element)) {
                 return element;
             }
-        } catch (e) {
-            console.log('CSS 선택자 오류:', e);
-        }
+        } catch (e) {}
         return null;
     }
 
-    // 텍스트 기반으로 요소 찾기
-    findElementByText(doc, originalSelector) {
-        if (!originalSelector) return null;
-
-        // 원래 선택자에서 텍스트 추출 시도
-        try {
-            const tempElement = doc.querySelector(originalSelector);
-            if (tempElement) {
-                const targetText = tempElement.textContent.trim();
-                if (targetText) {
-                    // 같은 텍스트를 가진 요소 찾기
-                    const candidates = doc.querySelectorAll('*');
-                    for (let element of candidates) {
-                        if (element.textContent.trim() === targetText && this.isElementVisible(element)) {
-                            return element;
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.log('텍스트 매칭 오류:', e);
-        }
-        return null;
-    }
-
-    // 첫 번째로 보이는 요소 찾기
     findFirstVisibleElement(doc) {
         const candidates = doc.querySelectorAll('button, h1, h2, h3, p, li, a, div, span');
 
@@ -824,41 +1445,6 @@ class HTMLLiveEditor {
         return null;
     }
 
-    // 우선순위에 따른 요소 찾기
-    findElementByPriority(doc) {
-        const prioritySelectors = [
-            'button',
-            'h1, h2, h3, h4, h5, h6',
-            'p',
-            'li',
-            'a',
-            'div',
-            'span'
-        ];
-
-        for (const selector of prioritySelectors) {
-            const elements = doc.querySelectorAll(selector);
-            for (let element of elements) {
-                if (this.isElementVisible(element) && element.textContent.trim()) {
-                    return element;
-                }
-            }
-        }
-        return null;
-    }
-
-    // 아무 요소라도 찾기 (최후 수단)
-    findAnyElement(doc) {
-        const allElements = doc.querySelectorAll('*');
-        for (let element of allElements) {
-            if (this.isElementVisible(element)) {
-                return element;
-            }
-        }
-        return null;
-    }
-
-    // 요소가 보이는지 확인
     isElementVisible(element) {
         if (!element) return false;
 
@@ -874,7 +1460,6 @@ class HTMLLiveEditor {
         this.undoBtn.disabled = this.historyIndex <= 0;
         this.redoBtn.disabled = this.historyIndex >= this.history.length - 1;
 
-        // 툴팁 업데이트
         if (this.historyIndex > 0) {
             this.undoBtn.title = `되돌리기: ${this.history[this.historyIndex - 1].action} (Ctrl+Z)`;
         } else {
@@ -889,85 +1474,56 @@ class HTMLLiveEditor {
     }
 
     handleKeydown(event) {
-        // Ctrl+Z: 되돌리기
         if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
             event.preventDefault();
             this.undo();
-        }
-        // Ctrl+Y 또는 Ctrl+Shift+Z: 다시실행
-        else if (event.ctrlKey && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+        } else if (event.ctrlKey && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
             event.preventDefault();
             this.redo();
+        } else if (event.key === 'Escape') {
+            this.hideStylePanel();
+            this.hideAIModal();
+            this.hideContextualMenus();
         }
     }
 
+    // ============== 요소 선택 ==============
     setupElementSelection(doc) {
-        console.log('⚙️ 이벤트 리스너 설정 시작');
-
-        // 요소 모드가 아닐 때는 설정하지 않음
-        if (!this.isElementMode) {
-            console.log('요소 모드가 아님 - 이벤트 리스너 설정 건너뜀');
-            return;
-        }
-
-        if (!doc || !doc.body) {
-            console.error('setupElementSelection: 유효하지 않은 document 또는 body');
-            return;
-        }
+        if (!this.isElementMode || !doc || !doc.body) return;
 
         try {
-            // 1단계: 기존 이벤트 리스너 완전 제거
             this.cleanupExistingEventListeners(doc);
-
-            // 2단계: 효율적인 이벤트 위임 설정
             this.setupEventDelegation(doc);
-
-            console.log('✅ 이벤트 리스너 설정 완료');
-
         } catch (error) {
             console.error('이벤트 리스너 설정 중 오류:', error);
         }
     }
 
-    // 기존 이벤트 리스너 완전 제거
     cleanupExistingEventListeners(doc) {
-        console.log('🧹 기존 이벤트 리스너 정리 중...');
-
         try {
-            // 기존 이벤트 위임 리스너 제거
             if (doc.body && this.currentEventListeners) {
                 this.currentEventListeners.forEach(({ event, handler }) => {
                     doc.body.removeEventListener(event, handler, true);
                 });
             }
 
-            // 개별 요소의 에디터 마크 제거
             const markedElements = doc.querySelectorAll('[data-editor-initialized]');
             markedElements.forEach(element => {
                 element.removeAttribute('data-editor-initialized');
                 element.classList.remove('element-hover', 'element-selected');
             });
 
-            // 리스너 배열 초기화
             this.currentEventListeners = [];
-
-            console.log(`정리된 요소 수: ${markedElements.length}`);
-
         } catch (error) {
             console.error('이벤트 리스너 정리 중 오류:', error);
         }
     }
 
-    // 효율적인 이벤트 위임 설정
     setupEventDelegation(doc) {
-        console.log('📡 이벤트 위임 설정 중...');
-
-        // 이벤트 리스너 저장 배열 초기화
         this.currentEventListeners = [];
 
-        // 마우스 진입 이벤트 (버블링 단계)
         const mouseenterHandler = (e) => {
-            if (!this.isElementMode) return;
+            if (!this.isElementMode || this.isDragging) return;
 
             const target = this.findEditableTarget(e.target);
             if (target && !this.selectedElement) {
@@ -975,7 +1531,6 @@ class HTMLLiveEditor {
             }
         };
 
-        // 마우스 나가기 이벤트 (버블링 단계)
         const mouseleaveHandler = (e) => {
             if (!this.isElementMode) return;
 
@@ -985,9 +1540,8 @@ class HTMLLiveEditor {
             }
         };
 
-        // 클릭 이벤트 (캡처 단계)
         const clickHandler = (e) => {
-            if (!this.isElementMode) return;
+            if (!this.isElementMode || this.isDragging) return;
 
             const target = this.findEditableTarget(e.target);
             if (target) {
@@ -997,7 +1551,6 @@ class HTMLLiveEditor {
             }
         };
 
-        // 컨텍스트 메뉴 이벤트 (캡처 단계)
         const contextmenuHandler = (e) => {
             if (!this.isElementMode) return;
 
@@ -1014,50 +1567,40 @@ class HTMLLiveEditor {
             }
         };
 
-        // 이벤트 리스너 등록 (body에 위임)
         try {
             doc.body.addEventListener('mouseenter', mouseenterHandler, true);
             doc.body.addEventListener('mouseleave', mouseleaveHandler, true);
             doc.body.addEventListener('click', clickHandler, true);
             doc.body.addEventListener('contextmenu', contextmenuHandler, true);
 
-            // 나중에 제거할 수 있도록 저장
             this.currentEventListeners = [
                 { event: 'mouseenter', handler: mouseenterHandler },
                 { event: 'mouseleave', handler: mouseleaveHandler },
                 { event: 'click', handler: clickHandler },
                 { event: 'contextmenu', handler: contextmenuHandler }
             ];
-
-            console.log('이벤트 위임 등록 완료');
-
         } catch (error) {
             console.error('이벤트 위임 등록 실패:', error);
         }
     }
 
-    // 편집 가능한 타겟 요소 찾기
     findEditableTarget(element) {
         if (!element || !element.tagName) return null;
 
-        // 제외할 요소들
         const excludedTags = ['html', 'head', 'body', 'script', 'style', 'meta', 'link'];
         const excludedClasses = ['editable-text'];
 
-        // 현재 요소부터 상위로 탐색
         let current = element;
         let attempts = 0;
-        const maxAttempts = 10; // 무한 루프 방지
+        const maxAttempts = 10;
 
         while (current && current.tagName && attempts < maxAttempts) {
             const tagName = current.tagName.toLowerCase();
 
-            // 제외 조건 확인
             if (excludedTags.includes(tagName)) {
                 return null;
             }
 
-            // 편집 불가능한 클래스 확인
             let hasExcludedClass = false;
             for (const className of excludedClasses) {
                 if (current.classList && current.classList.contains(className)) {
@@ -1067,7 +1610,6 @@ class HTMLLiveEditor {
             }
 
             if (!hasExcludedClass) {
-                // 유효한 편집 대상인지 확인
                 if (this.isValidEditTarget(current)) {
                     return current;
                 }
@@ -1080,50 +1622,137 @@ class HTMLLiveEditor {
         return null;
     }
 
-    // 유효한 편집 대상인지 확인
     isValidEditTarget(element) {
         if (!element || !element.tagName) return false;
 
         try {
-            // 화면에 보이는 요소인지 확인
             const rect = element.getBoundingClientRect();
             if (rect.width === 0 || rect.height === 0) {
                 return false;
             }
 
-            // 편집 가능한 요소 타입인지 확인
             const editableTags = [
                 'div', 'p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
                 'button', 'a', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th',
-                'img', 'section', 'article', 'header', 'footer', 'nav'
+                'img', 'section', 'article', 'header', 'footer', 'nav', 'form',
+                'input', 'textarea', 'select', 'label'
             ];
 
             const tagName = element.tagName.toLowerCase();
             return editableTags.includes(tagName);
-
         } catch (error) {
-            console.warn('편집 대상 검증 중 오류:', error);
             return false;
         }
     }
 
-    // 테이블 요소 확인 함수
     isTableElement(element) {
         const tagName = element.tagName.toLowerCase();
         return ['table', 'tr', 'td', 'th', 'thead', 'tbody', 'tfoot'].includes(tagName) ||
                element.closest('table') !== null;
     }
 
-    // 테이블 전용 컨텍스트 메뉴 표시
+    selectElement(element) {
+        if (this.selectedElement && this.selectedElement !== element) {
+            this.selectedElement.classList.remove('element-selected');
+        }
+
+        this.selectedElement = element;
+        element.classList.add('element-selected');
+        element.classList.remove('element-hover');
+
+        this.showFloatingToolbar(element);
+
+        // 스타일 패널이 열려있으면 업데이트
+        if (this.stylePanelOpen) {
+            this.loadCurrentStyles();
+        }
+    }
+
+    clearSelection() {
+        if (this.selectedElement) {
+            this.selectedElement.classList.remove('element-selected');
+            this.selectedElement = null;
+        }
+        this.hideFloatingToolbar();
+    }
+
+    // ============== 컨텍스트 메뉴 ==============
+    showContextMenu(event, element) {
+        this.contextMenuTarget = element;
+
+        const iframe = this.previewFrame;
+        const iframeRect = iframe.getBoundingClientRect();
+
+        this.contextMenu.style.display = 'block';
+        this.contextMenu.style.left = (iframeRect.left + event.clientX) + 'px';
+        this.contextMenu.style.top = (iframeRect.top + event.clientY) + 'px';
+        this.tableContextMenu.style.display = 'none';
+    }
+
     showTableContextMenu(event, element) {
         this.contextMenuTarget = element;
+
+        const iframe = this.previewFrame;
+        const iframeRect = iframe.getBoundingClientRect();
+
         this.tableContextMenu.style.display = 'block';
-        this.tableContextMenu.style.left = event.pageX + 'px';
-        this.tableContextMenu.style.top = event.pageY + 'px';
+        this.tableContextMenu.style.left = (iframeRect.left + event.clientX) + 'px';
+        this.tableContextMenu.style.top = (iframeRect.top + event.clientY) + 'px';
         this.contextMenu.style.display = 'none';
     }
 
-    // 테이블 컨텍스트 메뉴 클릭 처리
+    hideContextualMenus(event) {
+        if (!event) {
+            this.contextMenu.style.display = 'none';
+            this.tableContextMenu.style.display = 'none';
+            return;
+        }
+
+        if (!this.contextMenu.contains(event.target)) {
+            this.contextMenu.style.display = 'none';
+        }
+        if (!this.tableContextMenu.contains(event.target)) {
+            this.tableContextMenu.style.display = 'none';
+        }
+    }
+
+    handleContextMenuClick(event) {
+        const action = event.target.getAttribute('data-action');
+        const element = this.contextMenuTarget;
+
+        if (!action || !element) return;
+
+        const iframe = this.previewFrame;
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+
+        this.hideContextualMenus();
+        this.selectElement(element);
+
+        switch (action) {
+            case 'style':
+                this.showStylePanel();
+                break;
+            case 'add-button':
+                this.addElement(doc, 'button', '새 버튼');
+                break;
+            case 'add-list-item':
+                this.addElement(doc, 'li', '새 리스트 아이템');
+                break;
+            case 'add-image':
+                this.addElement(doc, 'img');
+                break;
+            case 'add-link':
+                this.addElement(doc, 'a', '새 링크');
+                break;
+            case 'duplicate':
+                this.duplicateElement();
+                break;
+            case 'delete':
+                this.deleteElement();
+                break;
+        }
+    }
+
     handleTableContextMenuClick(event) {
         const action = event.target.getAttribute('data-action');
         const element = this.contextMenuTarget;
@@ -1131,11 +1760,12 @@ class HTMLLiveEditor {
         if (!action || !element) return;
 
         this.hideContextualMenus();
-
-        // 클릭된 요소를 먼저 선택 (테이블 요소인 경우)
         this.selectElement(element);
 
         switch (action) {
+            case 'style':
+                this.showStylePanel();
+                break;
             case 'add-row-above':
                 this.addTableRow(element, 'above');
                 break;
@@ -1163,406 +1793,6 @@ class HTMLLiveEditor {
         }
     }
 
-    // 테이블 행 추가
-    addTableRow(element, position) {
-        const table = element.closest('table');
-        if (!table) return;
-
-        let targetRow = element.closest('tr');
-        if (!targetRow) return;
-
-        const colCount = targetRow.cells.length;
-        const newRow = targetRow.cloneNode(false);
-
-        // 새 셀들 생성
-        for (let i = 0; i < colCount; i++) {
-            const newCell = document.createElement(targetRow.cells[i].tagName.toLowerCase());
-            newCell.textContent = '새 셀';
-            this.makeElementEditable(newCell);
-            this.setupElementEventListeners(newCell);
-            newRow.appendChild(newCell);
-        }
-
-        if (position === 'above') {
-            targetRow.parentNode.insertBefore(newRow, targetRow);
-        } else {
-            targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
-        }
-
-        // 새로 추가된 행을 선택하여 툴바 유지
-        this.selectElement(newRow);
-        this.saveToHistory(`테이블 행 ${position === 'above' ? '위에' : '아래에'} 추가`, true);
-    }
-
-    // 테이블 열 추가
-    addTableColumn(element, position) {
-        const table = element.closest('table');
-        if (!table) return;
-
-        let targetCell = element.closest('td, th');
-        if (!targetCell) return;
-
-        const cellIndex = Array.from(targetCell.parentNode.cells).indexOf(targetCell);
-        const insertIndex = position === 'left' ? cellIndex : cellIndex + 1;
-
-        const rows = table.querySelectorAll('tr');
-        rows.forEach(row => {
-            const newCell = document.createElement(row.cells[cellIndex] ? row.cells[cellIndex].tagName.toLowerCase() : 'td');
-            newCell.textContent = '새 셀';
-            this.makeElementEditable(newCell);
-            this.setupElementEventListeners(newCell);
-
-            if (insertIndex >= row.cells.length) {
-                row.appendChild(newCell);
-            } else {
-                row.insertBefore(newCell, row.cells[insertIndex]);
-            }
-        });
-
-        // 원래 선택된 요소를 다시 선택하여 툴바 유지
-        this.selectElement(element);
-        this.saveToHistory(`테이블 열 ${position === 'left' ? '왼쪽에' : '오른쪽에'} 추가`, true);
-    }
-
-    // 테이블 행 삭제
-    deleteTableRow(element) {
-        const row = element.closest('tr');
-        if (!row) return;
-
-        const table = row.closest('table');
-        const rowCount = table.querySelectorAll('tr').length;
-
-        if (rowCount <= 1) {
-            alert('마지막 행은 삭제할 수 없습니다.');
-            return;
-        }
-
-        row.remove();
-        // 행 삭제 시에만 선택 해제 (요소가 삭제되었으므로)
-        this.clearSelection();
-        this.saveToHistory('테이블 행 삭제', true);
-    }
-
-    // 테이블 열 삭제
-    deleteTableColumn(element) {
-        const cell = element.closest('td, th');
-        if (!cell) return;
-
-        const table = cell.closest('table');
-        const cellIndex = Array.from(cell.parentNode.cells).indexOf(cell);
-        const colCount = table.querySelector('tr').cells.length;
-
-        if (colCount <= 1) {
-            alert('마지막 열은 삭제할 수 없습니다.');
-            return;
-        }
-
-        const rows = table.querySelectorAll('tr');
-        rows.forEach(row => {
-            if (row.cells[cellIndex]) {
-                row.cells[cellIndex].remove();
-            }
-        });
-
-        // 열 삭제 시에만 선택 해제 (요소가 삭제되었으므로)
-        this.clearSelection();
-        this.saveToHistory('테이블 열 삭제', true);
-    }
-
-    // 요소를 편집 가능하게 만들기
-    makeElementEditable(element) {
-        if (element.textContent.trim()) {
-            const span = element.ownerDocument.createElement('span');
-            span.className = 'editable-text';
-            span.contentEditable = true;
-            span.textContent = element.textContent;
-            element.textContent = '';
-            element.appendChild(span);
-        }
-    }
-
-    toggleElementMode() {
-        this.isElementMode = !this.isElementMode;
-
-        if (this.isElementMode) {
-            this.elementModeBtn.classList.add('active');
-            this.modeIndicator.textContent = '🔧 요소편집';
-            this.modeIndicator.style.color = '#007bff';
-        } else {
-            this.elementModeBtn.classList.remove('active');
-            this.modeIndicator.textContent = '📝 텍스트편집';
-            this.modeIndicator.style.color = '#28a745';
-            this.clearSelection();
-        }
-
-        // iframe 다시 설정
-        const iframe = this.previewFrame;
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        this.setupElementSelection(doc);
-    }
-
-    selectElement(element) {
-        // 이전 선택된 요소가 있으면 클래스만 제거 (툴바는 숨기지 않음)
-        if (this.selectedElement && this.selectedElement !== element) {
-            this.selectedElement.classList.remove('element-selected');
-        }
-
-        // 새 요소 선택
-        this.selectedElement = element;
-        element.classList.add('element-selected');
-        element.classList.remove('element-hover');
-
-        // 플로팅 툴바 표시
-        this.showFloatingToolbar(element);
-    }
-
-    clearSelection() {
-        if (this.selectedElement) {
-            this.selectedElement.classList.remove('element-selected');
-            this.selectedElement = null;
-        }
-        this.hideFloatingToolbar();
-    }
-
-    showContextMenu(event, element) {
-        this.contextMenuTarget = element;
-        this.contextMenu.style.display = 'block';
-        this.contextMenu.style.left = event.clientX + 'px';
-        this.contextMenu.style.top = event.clientY + 'px';
-        // 다른 메뉴들 숨기기
-        this.tableContextMenu.style.display = 'none';
-    }
-
-    showFloatingToolbar(element) {
-        console.log('🎯 툴바 표시 시작');
-
-        // 1단계: 기본 유효성 검사
-        if (!this.validateToolbarRequirements(element)) {
-            return;
-        }
-
-        // 2단계: 안전한 좌표 계산
-        const coordinates = this.calculateSafeToolbarPosition(element);
-        if (!coordinates) {
-            console.warn('좌표 계산 실패 - 기본 위치 사용');
-            this.showToolbarAtDefaultPosition();
-            return;
-        }
-
-        // 3단계: 툴바 표시
-        this.displayToolbarAtPosition(coordinates);
-        console.log('✅ 툴바 표시 완료');
-    }
-
-    // 툴바 표시 요구사항 검증
-    validateToolbarRequirements(element) {
-        // 요소 유효성 검사
-        if (!element) {
-            console.warn('showFloatingToolbar: 요소가 없습니다');
-            return false;
-        }
-
-        // 요소가 DOM에 연결되어 있는지 확인
-        if (!element.isConnected) {
-            console.warn('showFloatingToolbar: 요소가 DOM에 연결되어 있지 않습니다');
-            return false;
-        }
-
-        // iframe 유효성 검사
-        const iframe = this.previewFrame;
-        if (!iframe) {
-            console.warn('showFloatingToolbar: iframe이 없습니다');
-            return false;
-        }
-
-        // iframe document 유효성 검사
-        try {
-            const doc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!doc || !doc.body) {
-                console.warn('showFloatingToolbar: iframe document가 준비되지 않음');
-                return false;
-            }
-        } catch (e) {
-            console.warn('showFloatingToolbar: iframe 접근 불가:', e);
-            return false;
-        }
-
-        // 툴바 DOM 요소 유효성 검사
-        if (!this.floatingToolbar) {
-            console.warn('showFloatingToolbar: 툴바 요소가 없습니다');
-            return false;
-        }
-
-        return true;
-    }
-
-    // 안전한 툴바 위치 계산
-    calculateSafeToolbarPosition(element) {
-        try {
-            const iframe = this.previewFrame;
-
-            // iframe 위치 가져오기
-            let iframeRect;
-            try {
-                iframeRect = iframe.getBoundingClientRect();
-                if (!iframeRect || iframeRect.width === 0 || iframeRect.height === 0) {
-                    console.warn('iframe이 화면에 보이지 않음');
-                    return null;
-                }
-            } catch (e) {
-                console.error('iframe 위치 계산 실패:', e);
-                return null;
-            }
-
-            // 요소 위치 가져오기
-            let elementRect;
-            try {
-                elementRect = element.getBoundingClientRect();
-                if (!elementRect || elementRect.width === 0 || elementRect.height === 0) {
-                    console.warn('요소가 화면에 보이지 않음');
-                    return null;
-                }
-            } catch (e) {
-                console.error('요소 위치 계산 실패:', e);
-                return null;
-            }
-
-            // 툴바 위치 계산
-            const toolbarWidth = 200;
-            const toolbarHeight = 45;
-            const margin = 10;
-
-            let toolbarLeft = iframeRect.left + elementRect.left;
-            let toolbarTop = iframeRect.top + elementRect.top - toolbarHeight - margin;
-
-            // 화면 경계 조정
-            const screenWidth = window.innerWidth;
-            const screenHeight = window.innerHeight;
-
-            // 좌우 경계 체크
-            if (toolbarLeft < margin) {
-                toolbarLeft = margin;
-            } else if (toolbarLeft + toolbarWidth > screenWidth - margin) {
-                toolbarLeft = screenWidth - toolbarWidth - margin;
-            }
-
-            // 상하 경계 체크
-            if (toolbarTop < margin) {
-                // 위쪽에 공간이 없으면 요소 아래쪽에 배치
-                toolbarTop = iframeRect.top + elementRect.top + elementRect.height + margin;
-
-                // 아래쪽에도 공간이 없으면 화면 내 최적 위치
-                if (toolbarTop + toolbarHeight > screenHeight - margin) {
-                    toolbarTop = Math.max(margin, screenHeight - toolbarHeight - margin);
-                }
-            }
-
-            return {
-                left: Math.round(toolbarLeft),
-                top: Math.round(toolbarTop),
-                elementInfo: {
-                    left: elementRect.left,
-                    top: elementRect.top,
-                    width: elementRect.width,
-                    height: elementRect.height
-                }
-            };
-
-        } catch (error) {
-            console.error('좌표 계산 중 오류:', error);
-            return null;
-        }
-    }
-
-    // 계산된 위치에 툴바 표시
-    displayToolbarAtPosition(coordinates) {
-        try {
-            this.floatingToolbar.style.display = 'flex';
-            this.floatingToolbar.style.position = 'fixed';
-            this.floatingToolbar.style.left = coordinates.left + 'px';
-            this.floatingToolbar.style.top = coordinates.top + 'px';
-            this.floatingToolbar.style.zIndex = '10000';
-
-            console.log('툴바 위치:', coordinates);
-        } catch (error) {
-            console.error('툴바 표시 오류:', error);
-            this.showToolbarAtDefaultPosition();
-        }
-    }
-
-    // 기본 위치에 툴바 표시 (최후 수단)
-    showToolbarAtDefaultPosition() {
-        try {
-            console.log('기본 위치에 툴바 표시');
-            this.floatingToolbar.style.display = 'flex';
-            this.floatingToolbar.style.position = 'fixed';
-            this.floatingToolbar.style.left = '50px';
-            this.floatingToolbar.style.top = '100px';
-            this.floatingToolbar.style.zIndex = '10000';
-        } catch (error) {
-            console.error('기본 툴바 표시 실패:', error);
-        }
-    }
-
-    hideFloatingToolbar() {
-        this.floatingToolbar.style.display = 'none';
-    }
-
-    hideContextualMenus(event) {
-        // 인수가 없으면 모든 메뉴 강제로 숨기기 (메뉴 클릭 시)
-        if (!event) {
-            this.contextMenu.style.display = 'none';
-            this.tableContextMenu.style.display = 'none';
-            return;
-        }
-
-        // 이벤트가 있으면 각 메뉴 영역 외부 클릭 시에만 숨기기
-        if (!this.contextMenu.contains(event.target)) {
-            this.contextMenu.style.display = 'none';
-        }
-        if (!this.tableContextMenu.contains(event.target)) {
-            this.tableContextMenu.style.display = 'none';
-        }
-        // 툴바 영역이나 선택된 요소 영역 외부 클릭 시에도 선택 상태 유지
-        // (자연스러운 편집 경험을 위해 선택 해제를 최소화)
-    }
-
-    handleContextMenuClick(event) {
-        const action = event.target.getAttribute('data-action');
-        const element = this.contextMenuTarget;
-
-        if (!action || !element) return;
-
-        const iframe = this.previewFrame;
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-
-        this.hideContextualMenus();
-
-        // 클릭된 요소를 먼저 선택
-        this.selectElement(element);
-
-        switch (action) {
-            case 'add-button':
-                this.addElement(doc, 'button', '새 버튼');
-                break;
-            case 'add-list-item':
-                this.addElement(doc, 'li', '새 리스트 아이템');
-                break;
-            case 'add-image':
-                this.addElement(doc, 'img');
-                break;
-            case 'add-link':
-                this.addElement(doc, 'a', '새 링크');
-                break;
-            case 'duplicate':
-                this.duplicateElement();
-                break;
-            case 'delete':
-                this.deleteElement();
-                break;
-        }
-    }
-
     handleToolbarClick(event) {
         const action = event.target.getAttribute('data-action');
         if (!action || !this.selectedElement) return;
@@ -1574,6 +1804,9 @@ class HTMLLiveEditor {
             case 'move-down':
                 this.moveElement(this.selectedElement, 'down');
                 break;
+            case 'style':
+                this.showStylePanel();
+                break;
             case 'duplicate':
                 this.duplicateElement();
                 break;
@@ -1583,6 +1816,59 @@ class HTMLLiveEditor {
         }
     }
 
+    // ============== 플로팅 툴바 ==============
+    showFloatingToolbar(element) {
+        if (!element || !element.isConnected) return;
+
+        const iframe = this.previewFrame;
+        if (!iframe) return;
+
+        try {
+            const iframeRect = iframe.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+
+            if (elementRect.width === 0 || elementRect.height === 0) return;
+
+            const toolbarWidth = 200;
+            const toolbarHeight = 45;
+            const margin = 10;
+
+            let toolbarLeft = iframeRect.left + elementRect.left;
+            let toolbarTop = iframeRect.top + elementRect.top - toolbarHeight - margin;
+
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            if (toolbarLeft < margin) {
+                toolbarLeft = margin;
+            } else if (toolbarLeft + toolbarWidth > screenWidth - margin) {
+                toolbarLeft = screenWidth - toolbarWidth - margin;
+            }
+
+            if (toolbarTop < margin) {
+                toolbarTop = iframeRect.top + elementRect.top + elementRect.height + margin;
+
+                if (toolbarTop + toolbarHeight > screenHeight - margin) {
+                    toolbarTop = Math.max(margin, screenHeight - toolbarHeight - margin);
+                }
+            }
+
+            this.floatingToolbar.style.display = 'flex';
+            this.floatingToolbar.style.position = 'fixed';
+            this.floatingToolbar.style.left = Math.round(toolbarLeft) + 'px';
+            this.floatingToolbar.style.top = Math.round(toolbarTop) + 'px';
+            this.floatingToolbar.style.zIndex = '10000';
+
+        } catch (error) {
+            console.error('툴바 표시 오류:', error);
+        }
+    }
+
+    hideFloatingToolbar() {
+        this.floatingToolbar.style.display = 'none';
+    }
+
+    // ============== 요소 조작 ==============
     addElement(doc, tagName, textContent = '') {
         const newElement = doc.createElement(tagName);
 
@@ -1606,35 +1892,39 @@ class HTMLLiveEditor {
                 break;
         }
 
-        // 선택된 요소 다음에 추가하거나 body 끝에 추가
         if (this.selectedElement) {
             this.selectedElement.parentNode.insertBefore(newElement, this.selectedElement.nextSibling);
         } else {
             doc.body.appendChild(newElement);
         }
 
-        // 텍스트 요소인 경우 편집 가능하게 만들기
         if (textContent && ['button', 'li', 'a'].includes(tagName)) {
             this.makeElementEditable(newElement);
         }
 
-        // 새 요소에 이벤트 리스너 설정
         this.setupElementEventListeners(newElement);
-
-        // 새 요소 선택
         this.selectElement(newElement);
         this.saveToHistory(`${tagName} 요소 추가`, true);
-        console.log(`${tagName} 요소가 추가되었습니다.`);
     }
 
-    // 단일 요소에 이벤트 리스너 설정
+    makeElementEditable(element) {
+        if (element.textContent.trim()) {
+            const span = element.ownerDocument.createElement('span');
+            span.className = 'editable-text';
+            span.contentEditable = true;
+            span.textContent = element.textContent;
+            element.textContent = '';
+            element.appendChild(span);
+        }
+    }
+
     setupElementEventListeners(element) {
         if (!element || element.hasAttribute('data-editor-initialized')) return;
 
         element.setAttribute('data-editor-initialized', 'true');
 
         element.addEventListener('mouseenter', (e) => {
-            if (this.isElementMode && !this.selectedElement) {
+            if (this.isElementMode && !this.selectedElement && !this.isDragging) {
                 e.stopPropagation();
                 element.classList.add('element-hover');
             }
@@ -1648,7 +1938,7 @@ class HTMLLiveEditor {
         });
 
         element.addEventListener('click', (e) => {
-            if (this.isElementMode) {
+            if (this.isElementMode && !this.isDragging) {
                 e.preventDefault();
                 e.stopPropagation();
                 this.selectElement(element);
@@ -1675,23 +1965,20 @@ class HTMLLiveEditor {
         const element = this.selectedElement;
         const tagName = element.tagName.toLowerCase();
 
-        console.log(`복제 시작: ${tagName} 요소`);
-
         const clone = element.cloneNode(true);
         element.parentNode.insertBefore(clone, element.nextSibling);
 
-        // 복제된 요소에 이벤트 리스너 설정
         this.setupElementEventListeners(clone);
 
-        // 복제된 요소 내의 모든 자식 요소에도 이벤트 리스너 설정
         const childElements = clone.querySelectorAll('*');
         childElements.forEach(child => {
+            child.removeAttribute('data-editor-initialized');
             this.setupElementEventListeners(child);
         });
 
         this.selectElement(clone);
         this.saveToHistory(`${tagName} 요소 복제`, true);
-        console.log(`복제 완료: ${tagName} 요소`);
+        this.showToast('요소가 복제되었습니다.', 'success');
     }
 
     deleteElement() {
@@ -1699,37 +1986,29 @@ class HTMLLiveEditor {
 
         const element = this.selectedElement;
         const tagName = element.tagName.toLowerCase();
-        const elementText = element.textContent.trim().substring(0, 50) || tagName;
 
-        // 중요 요소 삭제 방지
         if (['html', 'head', 'body'].includes(tagName)) {
-            alert(`${tagName} 요소는 삭제할 수 없습니다.`);
+            this.showToast(`${tagName} 요소는 삭제할 수 없습니다.`, 'error');
             return;
         }
 
-        // 삭제 확인 (대형 요소나 많은 자식 요소가 있을 경우)
         const childCount = element.children.length;
         if (childCount > 5) {
-            const confirmed = confirm(`이 ${tagName} 요소는 ${childCount}개의 자식 요소를 포함하고 있습니다. 정말 삭제하시겠습니까?\n\n내용: "${elementText}"`);
+            const confirmed = confirm(`이 ${tagName} 요소는 ${childCount}개의 자식 요소를 포함하고 있습니다. 정말 삭제하시겠습니까?`);
             if (!confirmed) return;
         }
 
-        console.log(`삭제 시작: ${tagName} 요소 (자식: ${childCount}개)`);
-
-        // 삭제 실행
         try {
             const parent = element.parentNode;
             if (parent) {
                 parent.removeChild(element);
                 this.clearSelection();
                 this.saveToHistory(`${tagName} 요소 삭제`, true);
-                console.log(`삭제 완료: ${tagName} 요소`);
-            } else {
-                console.error('삭제 실패: 부모 요소를 찾을 수 없습니다.');
+                this.showToast('요소가 삭제되었습니다.', 'success');
             }
         } catch (error) {
             console.error('삭제 중 오류:', error);
-            alert('요소 삭제 중 오류가 발생했습니다.');
+            this.showToast('요소 삭제 중 오류가 발생했습니다.', 'error');
         }
     }
 
@@ -1744,29 +2023,127 @@ class HTMLLiveEditor {
             parent.insertBefore(element, siblings[currentIndex + 2]);
         }
 
-        // 요소 이동 후 선택 상태와 툴바 유지
         this.selectElement(element);
-        this.saveToHistory(`${element.tagName.toLowerCase()} 요소 ${direction === 'up' ? '위로' : '아래로'} 이동`, true);
-        console.log(`요소가 ${direction === 'up' ? '위로' : '아래로'} 이동되었습니다.`);
+        this.saveToHistory(`요소 ${direction === 'up' ? '위로' : '아래로'} 이동`, true);
     }
 
+    // ============== 테이블 조작 ==============
+    addTableRow(element, position) {
+        const table = element.closest('table');
+        if (!table) return;
 
+        let targetRow = element.closest('tr');
+        if (!targetRow) return;
+
+        const colCount = targetRow.cells.length;
+        const newRow = targetRow.cloneNode(false);
+
+        for (let i = 0; i < colCount; i++) {
+            const newCell = document.createElement(targetRow.cells[i].tagName.toLowerCase());
+            newCell.textContent = '새 셀';
+            this.makeElementEditable(newCell);
+            this.setupElementEventListeners(newCell);
+            newRow.appendChild(newCell);
+        }
+
+        if (position === 'above') {
+            targetRow.parentNode.insertBefore(newRow, targetRow);
+        } else {
+            targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
+        }
+
+        this.selectElement(newRow);
+        this.saveToHistory(`테이블 행 ${position === 'above' ? '위에' : '아래에'} 추가`, true);
+    }
+
+    addTableColumn(element, position) {
+        const table = element.closest('table');
+        if (!table) return;
+
+        let targetCell = element.closest('td, th');
+        if (!targetCell) return;
+
+        const cellIndex = Array.from(targetCell.parentNode.cells).indexOf(targetCell);
+        const insertIndex = position === 'left' ? cellIndex : cellIndex + 1;
+
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const newCell = document.createElement(row.cells[cellIndex] ? row.cells[cellIndex].tagName.toLowerCase() : 'td');
+            newCell.textContent = '새 셀';
+            this.makeElementEditable(newCell);
+            this.setupElementEventListeners(newCell);
+
+            if (insertIndex >= row.cells.length) {
+                row.appendChild(newCell);
+            } else {
+                row.insertBefore(newCell, row.cells[insertIndex]);
+            }
+        });
+
+        this.selectElement(element);
+        this.saveToHistory(`테이블 열 ${position === 'left' ? '왼쪽에' : '오른쪽에'} 추가`, true);
+    }
+
+    deleteTableRow(element) {
+        const row = element.closest('tr');
+        if (!row) return;
+
+        const table = row.closest('table');
+        const rowCount = table.querySelectorAll('tr').length;
+
+        if (rowCount <= 1) {
+            this.showToast('마지막 행은 삭제할 수 없습니다.', 'error');
+            return;
+        }
+
+        row.remove();
+        this.clearSelection();
+        this.saveToHistory('테이블 행 삭제', true);
+    }
+
+    deleteTableColumn(element) {
+        const cell = element.closest('td, th');
+        if (!cell) return;
+
+        const table = cell.closest('table');
+        const cellIndex = Array.from(cell.parentNode.cells).indexOf(cell);
+        const colCount = table.querySelector('tr').cells.length;
+
+        if (colCount <= 1) {
+            this.showToast('마지막 열은 삭제할 수 없습니다.', 'error');
+            return;
+        }
+
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            if (row.cells[cellIndex]) {
+                row.cells[cellIndex].remove();
+            }
+        });
+
+        this.clearSelection();
+        this.saveToHistory('테이블 열 삭제', true);
+    }
+
+    // ============== 다운로드 ==============
     extractCleanHTML() {
         const iframe = this.previewFrame;
         const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-        // iframe DOM을 복제하여 수정
         const clonedDoc = doc.cloneNode(true);
 
-        // 편집 관련 스타일 제거
+        // 에디터 스타일 제거
+        const editorStyles = clonedDoc.getElementById('editor-styles');
+        if (editorStyles) editorStyles.remove();
+
         const editStyles = clonedDoc.querySelectorAll('style');
         editStyles.forEach(style => {
-            if (style.textContent.includes('.editable-text')) {
+            if (style.textContent.includes('.editable-text') || style.textContent.includes('.element-selected')) {
                 style.remove();
             }
         });
 
-        // 모든 편집 가능한 요소에서 편집 속성 제거하고 텍스트만 남기기
+        // 편집 가능한 요소에서 편집 속성 제거
         const editableElements = clonedDoc.querySelectorAll('.editable-text');
         editableElements.forEach(element => {
             const text = element.textContent;
@@ -1775,27 +2152,28 @@ class HTMLLiveEditor {
         });
 
         // 요소 편집 관련 클래스 제거
-        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover');
+        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover, .element-dragging, .drop-target-highlight');
         selectedElements.forEach(element => {
-            element.classList.remove('element-selected', 'element-hover');
+            element.classList.remove('element-selected', 'element-hover', 'element-dragging', 'drop-target-highlight');
         });
 
-        // 깨끗한 HTML 반환
+        // data 속성 제거
+        const markedElements = clonedDoc.querySelectorAll('[data-editor-initialized], [data-original]');
+        markedElements.forEach(element => {
+            element.removeAttribute('data-editor-initialized');
+            element.removeAttribute('data-original');
+        });
+
         return clonedDoc.documentElement.outerHTML;
     }
 
-
     downloadHTML() {
         if (!this.originalHTML) {
-            alert('다운로드할 HTML이 없습니다.');
+            this.showToast('다운로드할 HTML이 없습니다.', 'error');
             return;
         }
 
-        // iframe에서 편집된 HTML 추출
         const editedHTML = this.extractCleanHTML();
-
-        console.log(`파일 다운로드: ${this.fileName.textContent}`);
-        console.log('편집된 HTML 길이:', editedHTML.length);
 
         const blob = new Blob([editedHTML], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -1824,6 +2202,7 @@ class HTMLLiveEditor {
     }
 }
 
+// 에디터 초기화
 document.addEventListener('DOMContentLoaded', () => {
     new HTMLLiveEditor();
 });

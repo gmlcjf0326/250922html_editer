@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Live Editor</title>
+    <title>HTML Live Editor Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <div class="upload-screen" id="uploadScreen">
         <div class="upload-container">
             <div class="upload-icon">📄</div>
-            <h1>HTML Live Editor</h1>
+            <h1>HTML Live Editor Pro</h1>
             <p>HTML 파일을 업로드하여 실시간으로 편집하세요</p>
 
             <div class="drop-zone" id="dropZone">
@@ -31,27 +31,317 @@
     <!-- 전체화면 iframe -->
     <iframe id="previewFrame" class="fullscreen-frame" style="display: none;"></iframe>
 
-    <!-- 다운로드 버튼 -->
-    <div class="download-button" id="downloadButton" style="display: none;">
-        <button id="downloadBtn" class="download-btn">
-            📥 다운로드
-        </button>
-        <button id="undoBtn" class="undo-btn" title="되돌리기 (Ctrl+Z)" disabled>
-            ↶ 되돌리기
-        </button>
-        <button id="redoBtn" class="redo-btn" title="다시실행 (Ctrl+Y)" disabled>
-            ↷ 다시실행
-        </button>
+    <!-- 드래그 가이드 라인 -->
+    <div class="drag-guide" id="dragGuide" style="display: none;">
+        <div class="drag-guide-line"></div>
+        <div class="drag-guide-text">여기에 놓기</div>
     </div>
 
-    <!-- 파일 정보 표시 -->
-    <div class="file-info" id="fileInfo" style="display: none;">
-        <span id="fileName" class="file-name"></span>
-        <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+    <!-- 드래그 중인 요소 고스트 -->
+    <div class="drag-ghost" id="dragGhost" style="display: none;"></div>
+
+    <!-- 상단 버튼 영역 -->
+    <div class="top-buttons" id="topButtons" style="display: none;">
+        <!-- 왼쪽 파일 정보 -->
+        <div class="file-info" id="fileInfo">
+            <span id="fileName" class="file-name"></span>
+            <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+        </div>
+
+        <!-- 오른쪽 버튼들 -->
+        <div class="action-buttons">
+            <button id="aiStyleBtn" class="ai-btn" title="AI 스타일 변환">
+                🤖 AI 스타일
+            </button>
+            <button id="downloadBtn" class="download-btn">
+                📥 다운로드
+            </button>
+            <button id="undoBtn" class="undo-btn" title="되돌리기 (Ctrl+Z)" disabled>
+                ↶ 되돌리기
+            </button>
+            <button id="redoBtn" class="redo-btn" title="다시실행 (Ctrl+Y)" disabled>
+                ↷ 다시실행
+            </button>
+        </div>
+    </div>
+
+    <!-- CSS 스타일 패널 -->
+    <div class="style-panel" id="stylePanel" style="display: none;">
+        <div class="style-panel-header">
+            <h3>🎨 스타일 편집</h3>
+            <button class="style-panel-close" id="stylePanelClose">×</button>
+        </div>
+
+        <div class="style-panel-content">
+            <!-- 배경색 -->
+            <div class="style-section">
+                <label class="style-label">배경색</label>
+                <div class="style-row">
+                    <input type="color" id="bgColor" class="color-picker" value="#ffffff">
+                    <input type="text" id="bgColorText" class="color-text" placeholder="#ffffff">
+                    <button class="style-btn-small" id="bgColorClear" title="배경색 제거">✕</button>
+                </div>
+            </div>
+
+            <!-- 그라데이션 -->
+            <div class="style-section">
+                <label class="style-label">그라데이션</label>
+                <div class="style-row">
+                    <input type="color" id="gradientStart" class="color-picker" value="#667eea">
+                    <span class="gradient-arrow">→</span>
+                    <input type="color" id="gradientEnd" class="color-picker" value="#764ba2">
+                    <select id="gradientDirection" class="style-select">
+                        <option value="to right">→</option>
+                        <option value="to left">←</option>
+                        <option value="to bottom">↓</option>
+                        <option value="to top">↑</option>
+                        <option value="to bottom right">↘</option>
+                        <option value="to bottom left">↙</option>
+                    </select>
+                </div>
+                <div class="style-row">
+                    <button class="style-btn" id="applyGradient">그라데이션 적용</button>
+                    <button class="style-btn-small" id="clearGradient" title="그라데이션 제거">✕</button>
+                </div>
+            </div>
+
+            <!-- 텍스트 색상 -->
+            <div class="style-section">
+                <label class="style-label">텍스트 색상</label>
+                <div class="style-row">
+                    <input type="color" id="textColor" class="color-picker" value="#333333">
+                    <input type="text" id="textColorText" class="color-text" placeholder="#333333">
+                </div>
+            </div>
+
+            <!-- 보더 -->
+            <div class="style-section">
+                <label class="style-label">보더</label>
+                <div class="style-row">
+                    <input type="number" id="borderWidth" class="style-input-small" value="1" min="0" max="20">
+                    <span class="style-unit">px</span>
+                    <select id="borderStyle" class="style-select">
+                        <option value="solid">실선</option>
+                        <option value="dashed">점선</option>
+                        <option value="dotted">점</option>
+                        <option value="double">이중선</option>
+                        <option value="none">없음</option>
+                    </select>
+                    <input type="color" id="borderColor" class="color-picker" value="#cccccc">
+                </div>
+                <div class="style-row">
+                    <button class="style-btn" id="applyBorder">보더 적용</button>
+                    <button class="style-btn-small" id="clearBorder" title="보더 제거">✕</button>
+                </div>
+            </div>
+
+            <!-- 보더 래디우스 -->
+            <div class="style-section">
+                <label class="style-label">둥글기 (Border Radius)</label>
+                <div class="style-row">
+                    <input type="range" id="borderRadius" class="style-range" min="0" max="50" value="0">
+                    <span id="borderRadiusValue" class="range-value">0px</span>
+                </div>
+            </div>
+
+            <!-- 여백 -->
+            <div class="style-section">
+                <label class="style-label">여백</label>
+                <div class="style-row spacing-row">
+                    <div class="spacing-item">
+                        <label>상</label>
+                        <input type="number" id="marginTop" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>하</label>
+                        <input type="number" id="marginBottom" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>좌</label>
+                        <input type="number" id="marginLeft" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>우</label>
+                        <input type="number" id="marginRight" class="style-input-small" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 패딩 -->
+            <div class="style-section">
+                <label class="style-label">패딩</label>
+                <div class="style-row spacing-row">
+                    <div class="spacing-item">
+                        <label>상</label>
+                        <input type="number" id="paddingTop" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>하</label>
+                        <input type="number" id="paddingBottom" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>좌</label>
+                        <input type="number" id="paddingLeft" class="style-input-small" value="0" min="0">
+                    </div>
+                    <div class="spacing-item">
+                        <label>우</label>
+                        <input type="number" id="paddingRight" class="style-input-small" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 그림자 -->
+            <div class="style-section">
+                <label class="style-label">그림자 (Box Shadow)</label>
+                <div class="style-row">
+                    <input type="number" id="shadowX" class="style-input-small" value="0" placeholder="X">
+                    <input type="number" id="shadowY" class="style-input-small" value="2" placeholder="Y">
+                    <input type="number" id="shadowBlur" class="style-input-small" value="4" placeholder="블러">
+                    <input type="color" id="shadowColor" class="color-picker" value="#000000">
+                </div>
+                <div class="style-row">
+                    <button class="style-btn" id="applyShadow">그림자 적용</button>
+                    <button class="style-btn-small" id="clearShadow" title="그림자 제거">✕</button>
+                </div>
+            </div>
+
+            <!-- 폰트 크기 -->
+            <div class="style-section">
+                <label class="style-label">폰트 크기</label>
+                <div class="style-row">
+                    <input type="range" id="fontSize" class="style-range" min="8" max="72" value="16">
+                    <span id="fontSizeValue" class="range-value">16px</span>
+                </div>
+            </div>
+
+            <!-- 프리셋 컬러 팔레트 -->
+            <div class="style-section">
+                <label class="style-label">빠른 색상</label>
+                <div class="color-palette" id="colorPalette">
+                    <button class="palette-color" data-color="#ffffff" style="background:#ffffff" title="흰색"></button>
+                    <button class="palette-color" data-color="#000000" style="background:#000000" title="검정"></button>
+                    <button class="palette-color" data-color="#f44336" style="background:#f44336" title="빨강"></button>
+                    <button class="palette-color" data-color="#e91e63" style="background:#e91e63" title="핑크"></button>
+                    <button class="palette-color" data-color="#9c27b0" style="background:#9c27b0" title="보라"></button>
+                    <button class="palette-color" data-color="#673ab7" style="background:#673ab7" title="딥퍼플"></button>
+                    <button class="palette-color" data-color="#3f51b5" style="background:#3f51b5" title="인디고"></button>
+                    <button class="palette-color" data-color="#2196f3" style="background:#2196f3" title="파랑"></button>
+                    <button class="palette-color" data-color="#03a9f4" style="background:#03a9f4" title="라이트블루"></button>
+                    <button class="palette-color" data-color="#00bcd4" style="background:#00bcd4" title="시안"></button>
+                    <button class="palette-color" data-color="#009688" style="background:#009688" title="틸"></button>
+                    <button class="palette-color" data-color="#4caf50" style="background:#4caf50" title="초록"></button>
+                    <button class="palette-color" data-color="#8bc34a" style="background:#8bc34a" title="라이트그린"></button>
+                    <button class="palette-color" data-color="#cddc39" style="background:#cddc39" title="라임"></button>
+                    <button class="palette-color" data-color="#ffeb3b" style="background:#ffeb3b" title="노랑"></button>
+                    <button class="palette-color" data-color="#ffc107" style="background:#ffc107" title="앰버"></button>
+                    <button class="palette-color" data-color="#ff9800" style="background:#ff9800" title="오렌지"></button>
+                    <button class="palette-color" data-color="#ff5722" style="background:#ff5722" title="딥오렌지"></button>
+                    <button class="palette-color" data-color="#795548" style="background:#795548" title="브라운"></button>
+                    <button class="palette-color" data-color="#9e9e9e" style="background:#9e9e9e" title="그레이"></button>
+                </div>
+            </div>
+
+            <!-- 스타일 프리셋 -->
+            <div class="style-section">
+                <label class="style-label">스타일 프리셋</label>
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-preset="glassmorphism">글래스모피즘</button>
+                    <button class="preset-btn" data-preset="neumorphism">뉴모피즘</button>
+                    <button class="preset-btn" data-preset="flat">플랫</button>
+                    <button class="preset-btn" data-preset="gradient-card">그라데이션 카드</button>
+                    <button class="preset-btn" data-preset="shadow-depth">깊은 그림자</button>
+                    <button class="preset-btn" data-preset="outline">아웃라인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 스타일 모달 -->
+    <div class="modal-overlay" id="aiModal" style="display: none;">
+        <div class="modal-content ai-modal">
+            <div class="modal-header">
+                <h2>🤖 AI 스타일 변환</h2>
+                <button class="modal-close" id="aiModalClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- API 설정 -->
+                <div class="ai-section">
+                    <label class="ai-label">AI 모델 선택</label>
+                    <div class="ai-model-select">
+                        <label class="ai-model-option">
+                            <input type="radio" name="aiModel" value="gemini" checked>
+                            <span class="model-badge gemini">Gemini</span>
+                        </label>
+                        <label class="ai-model-option">
+                            <input type="radio" name="aiModel" value="claude">
+                            <span class="model-badge claude">Claude</span>
+                        </label>
+                        <label class="ai-model-option">
+                            <input type="radio" name="aiModel" value="gpt">
+                            <span class="model-badge gpt">GPT</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ai-section">
+                    <label class="ai-label">API 키</label>
+                    <div class="api-key-row">
+                        <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API 키를 입력하세요">
+                        <button class="toggle-visibility" id="toggleApiKey">👁</button>
+                    </div>
+                    <small class="api-key-hint">API 키는 브라우저에 저장되며 외부로 전송되지 않습니다.</small>
+                </div>
+
+                <!-- 스타일 프롬프트 -->
+                <div class="ai-section">
+                    <label class="ai-label">스타일 설명</label>
+                    <textarea id="aiPrompt" class="ai-prompt" placeholder="원하는 스타일을 설명해주세요...&#10;예시: 모던하고 미니멀한 느낌으로 변경해줘"></textarea>
+                </div>
+
+                <!-- 빠른 프롬프트 -->
+                <div class="ai-section">
+                    <label class="ai-label">빠른 스타일</label>
+                    <div class="quick-prompts">
+                        <button class="quick-prompt-btn" data-prompt="모던하고 미니멀한 디자인으로 변경해줘. 깔끔한 여백과 심플한 색상을 사용해줘.">🎯 모던 미니멀</button>
+                        <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘.">🌙 다크 테마</button>
+                        <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘.">🌸 따뜻한 느낌</button>
+                        <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘.">💼 프로페셔널</button>
+                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 밝은 색상과 그라데이션, 동적인 느낌을 사용해줘.">🎨 활기찬</button>
+                        <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘.">✨ 럭셔리</button>
+                    </div>
+                </div>
+
+                <!-- 적용 범위 -->
+                <div class="ai-section">
+                    <label class="ai-label">적용 범위</label>
+                    <div class="scope-options">
+                        <label class="scope-option">
+                            <input type="radio" name="aiScope" value="selected" checked>
+                            <span>선택된 요소만</span>
+                        </label>
+                        <label class="scope-option">
+                            <input type="radio" name="aiScope" value="all">
+                            <span>전체 페이지</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="aiModalCancel">취소</button>
+                <button class="modal-btn primary" id="aiApplyBtn">
+                    <span class="btn-text">✨ AI 스타일 적용</span>
+                    <span class="btn-loading" style="display:none;">처리 중...</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- 컨텍스트 메뉴 -->
     <div class="context-menu" id="contextMenu" style="display: none;">
+        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-separator"></div>
         <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
         <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
         <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
@@ -63,6 +353,8 @@
 
     <!-- 테이블 전용 컨텍스트 메뉴 -->
     <div class="table-context-menu" id="tableContextMenu" style="display: none;">
+        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-separator"></div>
         <div class="context-menu-item" data-action="add-row-above">⬆️ 위에 행 추가</div>
         <div class="context-menu-item" data-action="add-row-below">⬇️ 아래에 행 추가</div>
         <div class="context-menu-item" data-action="add-col-left">⬅️ 왼쪽에 열 추가</div>
@@ -79,10 +371,13 @@
     <div class="floating-toolbar" id="floatingToolbar" style="display: none;">
         <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
         <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
+        <button class="toolbar-btn" data-action="style" title="스타일 편집">🎨</button>
         <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
         <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
     </div>
 
+    <!-- 토스트 메시지 -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script src="script.js"></script>
 </body>
