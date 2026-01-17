@@ -28,6 +28,11 @@ class HTMLLiveEditor {
             apiKey: ''
         };
 
+        // 다중 선택 상태
+        this.selectedElements = [];
+        this.isSelectionDragging = false;
+        this.selectionStart = { x: 0, y: 0 };
+
         this.initializeElements();
         this.bindEvents();
         this.loadSavedApiKeys();
@@ -70,6 +75,18 @@ class HTMLLiveEditor {
 
         // 토스트
         this.toastContainer = document.getElementById('toastContainer');
+
+        // 다중 선택 관련
+        this.selectionCount = document.getElementById('selectionCount');
+        this.selectionBox = document.getElementById('selectionBox');
+
+        // DOM 네비게이터
+        this.domNavigator = document.getElementById('domNavigator');
+        this.domBreadcrumb = document.getElementById('domBreadcrumb');
+        this.navParent = document.getElementById('navParent');
+        this.navPrevSibling = document.getElementById('navPrevSibling');
+        this.navNextSibling = document.getElementById('navNextSibling');
+        this.navFirstChild = document.getElementById('navFirstChild');
     }
 
     bindEvents() {
@@ -108,6 +125,15 @@ class HTMLLiveEditor {
         this.aiApplyBtn.addEventListener('click', () => this.applyAIStyle());
         this.toggleApiKey.addEventListener('click', () => this.toggleApiKeyVisibility());
         this.bindAIModalEvents();
+
+        // DOM 네비게이터 이벤트
+        this.navParent.addEventListener('click', () => this.navigateToParent());
+        this.navPrevSibling.addEventListener('click', () => this.navigateToPrevSibling());
+        this.navNextSibling.addEventListener('click', () => this.navigateToNextSibling());
+        this.navFirstChild.addEventListener('click', () => this.navigateToFirstChild());
+
+        // 레이아웃 탭 이벤트
+        this.bindLayoutEvents();
 
         // 페이지 새로고침 방지
         window.addEventListener('beforeunload', (e) => {
@@ -240,6 +266,88 @@ class HTMLLiveEditor {
                 this.applyStylePreset(btn.dataset.preset);
             });
         });
+    }
+
+    // ============== 레이아웃 이벤트 바인딩 ==============
+    bindLayoutEvents() {
+        // 레이아웃 탭 전환
+        document.querySelectorAll('.layout-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.layout-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                const layout = tab.dataset.layout;
+                document.getElementById('flexOptions').style.display = layout === 'flex' ? 'block' : 'none';
+                document.getElementById('gridOptions').style.display = layout === 'grid' ? 'block' : 'none';
+
+                if (this.selectedElement) {
+                    if (layout === 'none') {
+                        this.selectedElement.style.display = '';
+                    } else if (layout === 'flex') {
+                        this.selectedElement.style.display = 'flex';
+                        this.applyFlexboxStyles();
+                    } else if (layout === 'grid') {
+                        this.selectedElement.style.display = 'grid';
+                        this.applyGridStyles();
+                    }
+                    this.saveToHistory(`레이아웃 변경: ${layout}`, true);
+                }
+            });
+        });
+
+        // Flexbox 옵션 변경
+        ['flexDirection', 'justifyContent', 'alignItems', 'flexWrap', 'flexGap'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => this.applyFlexboxStyles());
+            }
+        });
+
+        // Grid 옵션 변경
+        ['gridCols', 'gridRows', 'gridColGap', 'gridRowGap', 'gridJustifyItems'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => this.applyGridStyles());
+            }
+        });
+    }
+
+    applyFlexboxStyles() {
+        if (!this.selectedElement) return;
+
+        const direction = document.getElementById('flexDirection').value;
+        const justify = document.getElementById('justifyContent').value;
+        const align = document.getElementById('alignItems').value;
+        const wrap = document.getElementById('flexWrap').value;
+        const gap = document.getElementById('flexGap').value;
+
+        this.selectedElement.style.display = 'flex';
+        this.selectedElement.style.flexDirection = direction;
+        this.selectedElement.style.justifyContent = justify;
+        this.selectedElement.style.alignItems = align;
+        this.selectedElement.style.flexWrap = wrap;
+        this.selectedElement.style.gap = `${gap}px`;
+
+        this.saveToHistory('Flexbox 스타일 변경', false);
+    }
+
+    applyGridStyles() {
+        if (!this.selectedElement) return;
+
+        const cols = document.getElementById('gridCols').value;
+        const rows = document.getElementById('gridRows').value;
+        const colGap = document.getElementById('gridColGap').value;
+        const rowGap = document.getElementById('gridRowGap').value;
+        const justifyItems = document.getElementById('gridJustifyItems').value;
+
+        this.selectedElement.style.display = 'grid';
+        this.selectedElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        this.selectedElement.style.gridTemplateRows = `repeat(${rows}, auto)`;
+        this.selectedElement.style.columnGap = `${colGap}px`;
+        this.selectedElement.style.rowGap = `${rowGap}px`;
+        this.selectedElement.style.justifyItems = justifyItems;
+
+        this.saveToHistory('Grid 스타일 변경', false);
     }
 
     // ============== AI 모달 이벤트 바인딩 ==============
@@ -758,6 +866,62 @@ class HTMLLiveEditor {
                 border: '2px solid #333333',
                 borderRadius: '8px',
                 boxShadow: 'none'
+            },
+            // Framer 스타일 프리셋
+            'framer-card': {
+                background: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                padding: '24px',
+                border: '1px solid rgba(0, 0, 0, 0.05)'
+            },
+            'framer-button': {
+                background: '#0055ff',
+                color: '#ffffff',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                border: 'none',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+            },
+            'framer-input': {
+                background: '#f7f7f7',
+                border: '1px solid #e5e5e5',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                outline: 'none',
+                transition: 'border-color 0.2s ease'
+            },
+            'framer-badge': {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#ffffff',
+                borderRadius: '100px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                display: 'inline-block'
+            },
+            'framer-avatar': {
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontWeight: '600'
+            },
+            'framer-tooltip': {
+                background: '#1a1a1a',
+                color: '#ffffff',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '12px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
             }
         };
 
@@ -1484,6 +1648,31 @@ ${html.substring(0, 3000)}
             this.hideStylePanel();
             this.hideAIModal();
             this.hideContextualMenus();
+            this.clearMultiSelection();
+        } else if (event.key === 'p' || event.key === 'P') {
+            // P: 부모 요소 선택
+            if (!event.ctrlKey && !event.altKey && this.selectedElement) {
+                event.preventDefault();
+                this.navigateToParent();
+            }
+        } else if (event.key === 'c' || event.key === 'C') {
+            // C: 첫 자식 요소 선택 (Ctrl+C는 복사이므로 제외)
+            if (!event.ctrlKey && !event.altKey && this.selectedElement) {
+                event.preventDefault();
+                this.navigateToFirstChild();
+            }
+        } else if (event.key === 'ArrowLeft' && !event.ctrlKey && this.selectedElement) {
+            // 왼쪽 화살표: 이전 형제
+            event.preventDefault();
+            this.navigateToPrevSibling();
+        } else if (event.key === 'ArrowRight' && !event.ctrlKey && this.selectedElement) {
+            // 오른쪽 화살표: 다음 형제
+            event.preventDefault();
+            this.navigateToNextSibling();
+        } else if (event.key === 'Delete' && this.selectedElement) {
+            // Delete: 요소 삭제
+            event.preventDefault();
+            this.deleteElement();
         }
     }
 
@@ -1547,7 +1736,8 @@ ${html.substring(0, 3000)}
             if (target) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.selectElement(target);
+                // Shift+클릭: 다중 선택
+                this.selectElement(target, e.shiftKey);
             }
         };
 
@@ -1651,7 +1841,25 @@ ${html.substring(0, 3000)}
                element.closest('table') !== null;
     }
 
-    selectElement(element) {
+    selectElement(element, addToSelection = false) {
+        if (addToSelection) {
+            // Shift+클릭: 다중 선택
+            if (this.selectedElements.includes(element)) {
+                // 이미 선택된 요소면 제거
+                element.classList.remove('element-multi-selected');
+                this.selectedElements = this.selectedElements.filter(e => e !== element);
+            } else {
+                // 새로 추가
+                element.classList.add('element-multi-selected');
+                this.selectedElements.push(element);
+            }
+            this.updateSelectionCount();
+            return;
+        }
+
+        // 기존 다중 선택 초기화
+        this.clearMultiSelection();
+
         if (this.selectedElement && this.selectedElement !== element) {
             this.selectedElement.classList.remove('element-selected');
         }
@@ -1661,11 +1869,263 @@ ${html.substring(0, 3000)}
         element.classList.remove('element-hover');
 
         this.showFloatingToolbar(element);
+        this.showDOMNavigator(element);
 
         // 스타일 패널이 열려있으면 업데이트
         if (this.stylePanelOpen) {
             this.loadCurrentStyles();
         }
+    }
+
+    // ============== 다중 선택 ==============
+    clearMultiSelection() {
+        this.selectedElements.forEach(el => {
+            el.classList.remove('element-multi-selected');
+        });
+        this.selectedElements = [];
+        this.updateSelectionCount();
+    }
+
+    updateSelectionCount() {
+        const count = this.selectedElements.length;
+        if (count > 0) {
+            this.selectionCount.textContent = `${count}개 선택`;
+            this.selectionCount.style.display = 'inline-block';
+        } else {
+            this.selectionCount.style.display = 'none';
+        }
+    }
+
+    // ============== DOM 네비게이터 ==============
+    showDOMNavigator(element) {
+        if (!element) {
+            this.domNavigator.style.display = 'none';
+            return;
+        }
+
+        this.domNavigator.style.display = 'flex';
+        this.updateBreadcrumb(element);
+        this.updateNavigationButtons(element);
+    }
+
+    hideDOMNavigator() {
+        this.domNavigator.style.display = 'none';
+    }
+
+    updateBreadcrumb(element) {
+        const path = [];
+        let current = element;
+        const doc = element.ownerDocument;
+
+        while (current && current !== doc.body && current.tagName) {
+            path.unshift(current);
+            current = current.parentElement;
+        }
+
+        // body 추가
+        if (doc.body) {
+            path.unshift(doc.body);
+        }
+
+        this.domBreadcrumb.innerHTML = '';
+        path.forEach((el, index) => {
+            if (index > 0) {
+                const separator = document.createElement('span');
+                separator.className = 'breadcrumb-separator';
+                separator.textContent = '›';
+                this.domBreadcrumb.appendChild(separator);
+            }
+
+            const item = document.createElement('span');
+            item.className = 'breadcrumb-item' + (el === element ? ' current' : '');
+
+            let label = el.tagName.toLowerCase();
+            if (el.id) {
+                label += `#${el.id}`;
+            } else if (el.className && typeof el.className === 'string') {
+                const classes = el.className.split(' ')
+                    .filter(c => c && !c.startsWith('element-') && !c.startsWith('editable-'))
+                    .slice(0, 2);
+                if (classes.length > 0) {
+                    label += `.${classes.join('.')}`;
+                }
+            }
+
+            item.textContent = label;
+            item.addEventListener('click', () => {
+                if (el !== element) {
+                    this.selectElement(el);
+                }
+            });
+            this.domBreadcrumb.appendChild(item);
+        });
+
+        // 스크롤을 오른쪽 끝으로
+        this.domBreadcrumb.scrollLeft = this.domBreadcrumb.scrollWidth;
+    }
+
+    updateNavigationButtons(element) {
+        const parent = element.parentElement;
+        const doc = element.ownerDocument;
+
+        // 부모 버튼
+        this.navParent.disabled = !parent || parent === doc.body || parent.tagName === 'BODY';
+
+        // 이전/다음 형제 버튼
+        const prevSibling = this.findValidSibling(element, 'previous');
+        const nextSibling = this.findValidSibling(element, 'next');
+        this.navPrevSibling.disabled = !prevSibling;
+        this.navNextSibling.disabled = !nextSibling;
+
+        // 자식 버튼
+        const firstChild = this.findValidChild(element);
+        this.navFirstChild.disabled = !firstChild;
+    }
+
+    findValidSibling(element, direction) {
+        let sibling = direction === 'previous' ? element.previousElementSibling : element.nextElementSibling;
+        while (sibling) {
+            if (this.isValidEditTarget(sibling)) {
+                return sibling;
+            }
+            sibling = direction === 'previous' ? sibling.previousElementSibling : sibling.nextElementSibling;
+        }
+        return null;
+    }
+
+    findValidChild(element) {
+        for (const child of element.children) {
+            if (this.isValidEditTarget(child)) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    navigateToParent() {
+        if (!this.selectedElement) return;
+        const parent = this.selectedElement.parentElement;
+        const doc = this.selectedElement.ownerDocument;
+        if (parent && parent !== doc.body && parent.tagName !== 'BODY') {
+            this.selectElement(parent);
+        }
+    }
+
+    navigateToPrevSibling() {
+        if (!this.selectedElement) return;
+        const sibling = this.findValidSibling(this.selectedElement, 'previous');
+        if (sibling) {
+            this.selectElement(sibling);
+        }
+    }
+
+    navigateToNextSibling() {
+        if (!this.selectedElement) return;
+        const sibling = this.findValidSibling(this.selectedElement, 'next');
+        if (sibling) {
+            this.selectElement(sibling);
+        }
+    }
+
+    navigateToFirstChild() {
+        if (!this.selectedElement) return;
+        const child = this.findValidChild(this.selectedElement);
+        if (child) {
+            this.selectElement(child);
+        }
+    }
+
+    // ============== Wrap/Unwrap/Move-out ==============
+    wrapWithDiv() {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const element = this.selectedElement;
+        const doc = element.ownerDocument;
+        const parent = element.parentElement;
+
+        if (!parent) {
+            this.showToast('부모 요소가 없습니다.', 'error');
+            return;
+        }
+
+        // 새 div 생성
+        const wrapper = doc.createElement('div');
+        wrapper.style.cssText = 'padding: 10px; border: 1px dashed #ccc;';
+
+        // 요소를 div로 감싸기
+        parent.insertBefore(wrapper, element);
+        wrapper.appendChild(element);
+
+        this.setupElementEventListeners(wrapper);
+        this.selectElement(wrapper);
+        this.saveToHistory('div로 감싸기', true);
+        this.showToast('요소를 div로 감쌌습니다.', 'success');
+    }
+
+    unwrapElement() {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const element = this.selectedElement;
+        const parent = element.parentElement;
+
+        if (!parent || parent.tagName === 'BODY') {
+            this.showToast('감싸기를 해제할 수 없습니다.', 'error');
+            return;
+        }
+
+        // 요소의 모든 자식들을 부모 앞으로 이동
+        const children = Array.from(element.children);
+        if (children.length === 0) {
+            this.showToast('자식 요소가 없습니다.', 'warning');
+            return;
+        }
+
+        children.forEach(child => {
+            parent.insertBefore(child, element);
+            this.setupElementEventListeners(child);
+        });
+
+        // 원래 요소 삭제
+        element.remove();
+
+        // 첫 번째 자식 선택
+        if (children.length > 0) {
+            this.selectElement(children[0]);
+        } else {
+            this.clearSelection();
+        }
+
+        this.saveToHistory('감싸기 해제', true);
+        this.showToast('감싸기가 해제되었습니다.', 'success');
+    }
+
+    moveOutOfParent() {
+        if (!this.selectedElement) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const element = this.selectedElement;
+        const parent = element.parentElement;
+        const grandparent = parent ? parent.parentElement : null;
+
+        if (!grandparent || grandparent.tagName === 'HTML') {
+            this.showToast('더 이상 밖으로 이동할 수 없습니다.', 'error');
+            return;
+        }
+
+        // 부모 다음 위치로 이동
+        grandparent.insertBefore(element, parent.nextSibling);
+
+        this.selectElement(element);
+        this.saveToHistory('부모 밖으로 이동', true);
+        this.showToast('요소를 부모 밖으로 이동했습니다.', 'success');
     }
 
     clearSelection() {
@@ -1674,6 +2134,8 @@ ${html.substring(0, 3000)}
             this.selectedElement = null;
         }
         this.hideFloatingToolbar();
+        this.hideDOMNavigator();
+        this.clearMultiSelection();
     }
 
     // ============== 컨텍스트 메뉴 ==============
@@ -1743,6 +2205,15 @@ ${html.substring(0, 3000)}
                 break;
             case 'add-link':
                 this.addElement(doc, 'a', '새 링크');
+                break;
+            case 'wrap-div':
+                this.wrapWithDiv();
+                break;
+            case 'unwrap':
+                this.unwrapElement();
+                break;
+            case 'move-out':
+                this.moveOutOfParent();
                 break;
             case 'duplicate':
                 this.duplicateElement();
