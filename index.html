@@ -46,6 +46,7 @@
         <div class="file-info" id="fileInfo">
             <span id="fileName" class="file-name"></span>
             <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+            <span id="selectionCount" class="selection-count" style="display: none;">0개 선택</span>
         </div>
 
         <!-- 오른쪽 버튼들 -->
@@ -64,6 +65,20 @@
             </button>
         </div>
     </div>
+
+    <!-- DOM 네비게이터 (브레드크럼) -->
+    <div class="dom-navigator" id="domNavigator" style="display: none;">
+        <div class="dom-breadcrumb" id="domBreadcrumb"></div>
+        <div class="dom-nav-buttons">
+            <button class="dom-nav-btn" id="navParent" title="부모 요소 선택 (P)">↑ 부모</button>
+            <button class="dom-nav-btn" id="navPrevSibling" title="이전 형제 (←)">← 이전</button>
+            <button class="dom-nav-btn" id="navNextSibling" title="다음 형제 (→)">다음 →</button>
+            <button class="dom-nav-btn" id="navFirstChild" title="첫 자식 요소 (C)">↓ 자식</button>
+        </div>
+    </div>
+
+    <!-- 다중 선택 영역 박스 -->
+    <div class="selection-box" id="selectionBox" style="display: none;"></div>
 
     <!-- CSS 스타일 패널 -->
     <div class="style-panel" id="stylePanel" style="display: none;">
@@ -253,6 +268,107 @@
                     <button class="preset-btn" data-preset="outline">아웃라인</button>
                 </div>
             </div>
+
+            <!-- Framer 스타일 프리셋 -->
+            <div class="style-section">
+                <label class="style-label">Framer 스타일</label>
+                <div class="preset-buttons framer-presets">
+                    <button class="preset-btn framer" data-preset="framer-card">카드</button>
+                    <button class="preset-btn framer" data-preset="framer-button">버튼</button>
+                    <button class="preset-btn framer" data-preset="framer-input">인풋</button>
+                    <button class="preset-btn framer" data-preset="framer-badge">뱃지</button>
+                    <button class="preset-btn framer" data-preset="framer-avatar">아바타</button>
+                    <button class="preset-btn framer" data-preset="framer-tooltip">툴팁</button>
+                </div>
+            </div>
+
+            <!-- 레이아웃 (Flexbox/Grid) -->
+            <div class="style-section">
+                <label class="style-label">레이아웃</label>
+                <div class="layout-tabs">
+                    <button class="layout-tab active" data-layout="none">없음</button>
+                    <button class="layout-tab" data-layout="flex">Flexbox</button>
+                    <button class="layout-tab" data-layout="grid">Grid</button>
+                </div>
+
+                <!-- Flexbox 옵션 -->
+                <div class="layout-options" id="flexOptions" style="display: none;">
+                    <div class="style-row">
+                        <label>방향</label>
+                        <select id="flexDirection" class="style-select">
+                            <option value="row">가로 (row)</option>
+                            <option value="row-reverse">가로 역순</option>
+                            <option value="column">세로 (column)</option>
+                            <option value="column-reverse">세로 역순</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <label>가로 정렬</label>
+                        <select id="justifyContent" class="style-select">
+                            <option value="flex-start">시작</option>
+                            <option value="center">가운데</option>
+                            <option value="flex-end">끝</option>
+                            <option value="space-between">균등 (양끝)</option>
+                            <option value="space-around">균등 (여백)</option>
+                            <option value="space-evenly">균등 (동일)</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <label>세로 정렬</label>
+                        <select id="alignItems" class="style-select">
+                            <option value="stretch">늘리기</option>
+                            <option value="flex-start">시작</option>
+                            <option value="center">가운데</option>
+                            <option value="flex-end">끝</option>
+                            <option value="baseline">베이스라인</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <label>줄바꿈</label>
+                        <select id="flexWrap" class="style-select">
+                            <option value="nowrap">안함</option>
+                            <option value="wrap">줄바꿈</option>
+                            <option value="wrap-reverse">역순 줄바꿈</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <label>간격</label>
+                        <input type="number" id="flexGap" class="style-input-small" value="0" min="0">
+                        <span class="style-unit">px</span>
+                    </div>
+                </div>
+
+                <!-- Grid 옵션 -->
+                <div class="layout-options" id="gridOptions" style="display: none;">
+                    <div class="style-row">
+                        <label>열 개수</label>
+                        <input type="number" id="gridCols" class="style-input-small" value="3" min="1" max="12">
+                    </div>
+                    <div class="style-row">
+                        <label>행 개수</label>
+                        <input type="number" id="gridRows" class="style-input-small" value="2" min="1" max="12">
+                    </div>
+                    <div class="style-row">
+                        <label>열 간격</label>
+                        <input type="number" id="gridColGap" class="style-input-small" value="10" min="0">
+                        <span class="style-unit">px</span>
+                    </div>
+                    <div class="style-row">
+                        <label>행 간격</label>
+                        <input type="number" id="gridRowGap" class="style-input-small" value="10" min="0">
+                        <span class="style-unit">px</span>
+                    </div>
+                    <div class="style-row">
+                        <label>항목 정렬</label>
+                        <select id="gridJustifyItems" class="style-select">
+                            <option value="stretch">늘리기</option>
+                            <option value="start">시작</option>
+                            <option value="center">가운데</option>
+                            <option value="end">끝</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -346,6 +462,10 @@
         <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
         <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
         <div class="context-menu-item" data-action="add-link">➕ 링크 추가</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="wrap-div">📦 div로 감싸기</div>
+        <div class="context-menu-item" data-action="unwrap">📤 감싸기 해제</div>
+        <div class="context-menu-item" data-action="move-out">↗️ 부모 밖으로 이동</div>
         <div class="context-menu-separator"></div>
         <div class="context-menu-item" data-action="duplicate">📋 복제</div>
         <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>

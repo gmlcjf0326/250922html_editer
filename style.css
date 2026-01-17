@@ -1105,3 +1105,197 @@ body {
 .modal-body::-webkit-scrollbar-thumb:hover {
 	background: #999;
 }
+
+/* ============== 다중 선택 관련 스타일 ============== */
+.selection-count {
+	font-size: 12px;
+	color: #28a745;
+	font-weight: 600;
+	padding: 4px 10px;
+	background: rgba(40, 167, 69, 0.1);
+	border-radius: 12px;
+	margin-left: 8px;
+}
+
+.selection-box {
+	position: fixed;
+	border: 2px dashed #007bff;
+	background: rgba(0, 123, 255, 0.1);
+	pointer-events: none;
+	z-index: 9998;
+}
+
+.element-multi-selected {
+	outline: 2px solid #28a745 !important;
+	outline-offset: 2px;
+	background: rgba(40, 167, 69, 0.05) !important;
+}
+
+/* ============== DOM 네비게이터 스타일 ============== */
+.dom-navigator {
+	position: fixed;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: white;
+	border-radius: 12px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+	padding: 12px 16px;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: 90vw;
+	animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+	from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+	to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.dom-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	color: #666;
+	overflow-x: auto;
+	white-space: nowrap;
+	padding-bottom: 4px;
+}
+
+.dom-breadcrumb::-webkit-scrollbar {
+	height: 4px;
+}
+
+.dom-breadcrumb::-webkit-scrollbar-thumb {
+	background: #ccc;
+	border-radius: 2px;
+}
+
+.breadcrumb-item {
+	padding: 4px 8px;
+	background: #f0f0f0;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-family: monospace;
+}
+
+.breadcrumb-item:hover {
+	background: #e0e0e0;
+}
+
+.breadcrumb-item.current {
+	background: #007bff;
+	color: white;
+}
+
+.breadcrumb-separator {
+	color: #999;
+	font-size: 10px;
+}
+
+.dom-nav-buttons {
+	display: flex;
+	gap: 6px;
+	justify-content: center;
+}
+
+.dom-nav-btn {
+	padding: 8px 12px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	background: white;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.dom-nav-btn:hover {
+	border-color: #007bff;
+	background: #f0f7ff;
+	color: #007bff;
+}
+
+.dom-nav-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* ============== 레이아웃 탭 스타일 ============== */
+.layout-tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 12px;
+	background: #f0f0f0;
+	padding: 4px;
+	border-radius: 8px;
+}
+
+.layout-tab {
+	flex: 1;
+	padding: 8px 12px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: #666;
+}
+
+.layout-tab:hover {
+	background: rgba(255, 255, 255, 0.5);
+}
+
+.layout-tab.active {
+	background: white;
+	color: #007bff;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.layout-options {
+	padding: 12px;
+	background: #f8f9fa;
+	border-radius: 8px;
+	margin-top: 8px;
+}
+
+.layout-options .style-row {
+	margin-bottom: 10px;
+}
+
+.layout-options .style-row:last-child {
+	margin-bottom: 0;
+}
+
+.layout-options label {
+	font-size: 11px;
+	color: #666;
+	min-width: 70px;
+}
+
+.layout-options .style-select {
+	flex: 1;
+}
+
+/* ============== Framer 프리셋 스타일 ============== */
+.framer-presets {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+.preset-btn.framer {
+	background: linear-gradient(135deg, #0055ff 0%, #00c6ff 100%);
+	color: white;
+	border: none;
+	font-weight: 500;
+}
+
+.preset-btn.framer:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 85, 255, 0.3);
+}
