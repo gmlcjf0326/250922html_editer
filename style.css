@@ -1105,3 +1105,386 @@ body {
 .modal-body::-webkit-scrollbar-thumb:hover {
 	background: #999;
 }
+
+/* ============== 새로운 스타일 추가 ============== */
+
+/* 다중 선택 버튼 */
+.multi-select-btn {
+	padding: 10px 16px;
+	border: 2px solid #6c757d;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	transition: all 0.3s ease;
+	background: white;
+	color: #6c757d;
+}
+
+.multi-select-btn:hover {
+	background: #6c757d;
+	color: white;
+}
+
+.multi-select-btn.active {
+	background: #007bff;
+	border-color: #007bff;
+	color: white;
+}
+
+/* 선택 개수 표시 */
+.selection-count {
+	font-size: 12px;
+	color: white;
+	font-weight: 600;
+	padding: 4px 10px;
+	background: #007bff;
+	border-radius: 12px;
+}
+
+/* 다중 선택 영역 박스 */
+.selection-box {
+	position: fixed;
+	border: 2px dashed #007bff;
+	background: rgba(0, 123, 255, 0.1);
+	z-index: 10003;
+	pointer-events: none;
+}
+
+/* DOM 계층 네비게이터 */
+.dom-navigator {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 50px;
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(10px);
+	border-top: 1px solid rgba(0, 0, 0, 0.1);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 20px;
+	z-index: 1000;
+}
+
+.dom-breadcrumb {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	overflow-x: auto;
+	flex: 1;
+	padding-right: 20px;
+}
+
+.breadcrumb-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 10px;
+	background: #f0f0f0;
+	border-radius: 6px;
+	font-size: 12px;
+	color: #666;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.breadcrumb-item:hover {
+	background: #007bff;
+	color: white;
+}
+
+.breadcrumb-item.current {
+	background: #007bff;
+	color: white;
+	font-weight: 600;
+}
+
+.breadcrumb-arrow {
+	color: #999;
+	font-size: 10px;
+}
+
+.dom-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.dom-action-btn {
+	padding: 6px 12px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	background: white;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.dom-action-btn:hover {
+	border-color: #007bff;
+	color: #007bff;
+	background: #f0f7ff;
+}
+
+/* 스타일 패널 탭 */
+.style-panel-tabs {
+	display: flex;
+	background: #f8f9fa;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+.style-tab {
+	flex: 1;
+	padding: 12px;
+	border: none;
+	background: transparent;
+	font-size: 13px;
+	font-weight: 500;
+	color: #666;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	position: relative;
+}
+
+.style-tab:hover {
+	color: #007bff;
+	background: rgba(0, 123, 255, 0.05);
+}
+
+.style-tab.active {
+	color: #007bff;
+	background: white;
+}
+
+.style-tab.active::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: #007bff;
+	border-radius: 3px 3px 0 0;
+}
+
+/* 탭 콘텐츠 */
+.style-tab-content {
+	display: none;
+}
+
+.style-tab-content.active {
+	display: block;
+}
+
+/* 레이아웃 편집 */
+.style-select.full-width {
+	flex: 1;
+	width: 100%;
+}
+
+.style-input {
+	flex: 1;
+	height: 32px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	padding: 0 10px;
+	font-size: 13px;
+}
+
+.style-input:focus {
+	outline: none;
+	border-color: #007bff;
+}
+
+.style-label-small {
+	font-size: 11px;
+	color: #888;
+	min-width: 80px;
+}
+
+.direction-buttons {
+	display: flex;
+	gap: 4px;
+	flex: 1;
+}
+
+.direction-btn {
+	flex: 1;
+	height: 32px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	background: white;
+	font-size: 16px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.direction-btn:hover {
+	border-color: #007bff;
+	background: #f0f7ff;
+}
+
+.direction-btn.active {
+	border-color: #007bff;
+	background: #007bff;
+	color: white;
+}
+
+/* Framer 프리셋 버튼 */
+.preset-btn.framer {
+	background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+	color: white;
+	border: none;
+}
+
+.preset-btn.framer:hover {
+	background: linear-gradient(135deg, #0f0f1a 0%, #0d1629 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 다중 선택 툴바 */
+.multi-toolbar {
+	position: fixed;
+	bottom: 60px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: white;
+	border: 1px solid #e0e0e0;
+	border-radius: 12px;
+	box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+	z-index: 10000;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+	from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+	to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.multi-toolbar-info {
+	font-size: 12px;
+	font-weight: 600;
+	color: #007bff;
+	padding-right: 8px;
+	border-right: 1px solid #e0e0e0;
+}
+
+.multi-toolbar .toolbar-btn {
+	width: auto;
+	padding: 8px 12px;
+	font-size: 12px;
+	gap: 4px;
+}
+
+/* 다중 선택된 요소 스타일 */
+.element-multi-selected {
+	outline: 2px solid #28a745 !important;
+	outline-offset: 2px;
+	background: rgba(40, 167, 69, 0.05) !important;
+}
+
+/* 레이아웃 섹션 스타일 */
+.layout-flex-section,
+.layout-grid-section {
+	background: #f8f9fa;
+	padding: 12px;
+	border-radius: 8px;
+	margin-top: 8px;
+}
+
+.layout-flex-section .style-row,
+.layout-grid-section .style-row {
+	margin-bottom: 10px;
+}
+
+/* iframe 위치 조정 (DOM 네비게이터가 있을 때) */
+.fullscreen-frame.with-navigator {
+	height: calc(100vh - 50px);
+}
+
+/* 컨텍스트 메뉴 확장 */
+.context-menu {
+	max-height: 80vh;
+	overflow-y: auto;
+}
+
+/* 추가 애니메이션 */
+@keyframes highlight-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
+	50% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+}
+
+.element-highlight-pulse {
+	animation: highlight-pulse 1s ease-in-out 2;
+}
+
+/* 레이아웃 미리보기 아이콘 */
+.layout-preview {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.layout-preview-item {
+	width: 60px;
+	height: 40px;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.layout-preview-item:hover {
+	border-color: #007bff;
+	background: #f0f7ff;
+}
+
+.layout-preview-item.active {
+	border-color: #007bff;
+	background: #007bff;
+	color: white;
+}
+
+/* 스타일 패널 최대 높이 조정 */
+.style-panel-content {
+	max-height: calc(100vh - 220px);
+}
+
+/* 모바일 DOM 네비게이터 */
+@media (max-width: 768px) {
+	.dom-navigator {
+		flex-direction: column;
+		height: auto;
+		padding: 10px;
+		gap: 8px;
+	}
+
+	.dom-breadcrumb {
+		width: 100%;
+		padding-right: 0;
+	}
+
+	.dom-actions {
+		width: 100%;
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.multi-toolbar {
+		bottom: 120px;
+		flex-wrap: wrap;
+		max-width: 90%;
+		justify-content: center;
+	}
+}
