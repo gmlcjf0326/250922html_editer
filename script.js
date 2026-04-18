@@ -33,9 +33,25 @@ class HTMLLiveEditor {
         this.isSelectionDragging = false;
         this.selectionStart = { x: 0, y: 0 };
 
+        // 신규 기능 상태
+        this.currentFileName = '';
+        this.localFilePath = localStorage.getItem('localFilePath') || '';
+        this.preferredEditor = localStorage.getItem('preferredEditor') || 'vscode';
+        this.fileHandle = null;
+        this.iconCache = new Map();
+        this.iconConfig = { size: 24, stroke: 2, color: '#0f172a' };
+        this.activeAssetTab = 'icon';
+        this.activeTemplateCategory = 'component';
+        this.commandPaletteVisible = false;
+        this.autosaveTimer = null;
+
         this.initializeElements();
         this.bindEvents();
         this.loadSavedApiKeys();
+
+        // 신규 모듈 초기화
+        this.initTheme();
+        this.initGluestackModules();
     }
 
     initializeElements() {
@@ -131,9 +147,6 @@ class HTMLLiveEditor {
         this.navPrevSibling.addEventListener('click', () => this.navigateToPrevSibling());
         this.navNextSibling.addEventListener('click', () => this.navigateToNextSibling());
         this.navFirstChild.addEventListener('click', () => this.navigateToFirstChild());
-
-        // 레이아웃 탭 이벤트
-        this.bindLayoutEvents();
 
         // 페이지 새로고침 방지
         window.addEventListener('beforeunload', (e) => {
@@ -260,94 +273,6 @@ class HTMLLiveEditor {
             }
         });
 
-        // 스타일 프리셋
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.applyStylePreset(btn.dataset.preset);
-            });
-        });
-    }
-
-    // ============== 레이아웃 이벤트 바인딩 ==============
-    bindLayoutEvents() {
-        // 레이아웃 탭 전환
-        document.querySelectorAll('.layout-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.layout-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                const layout = tab.dataset.layout;
-                document.getElementById('flexOptions').style.display = layout === 'flex' ? 'block' : 'none';
-                document.getElementById('gridOptions').style.display = layout === 'grid' ? 'block' : 'none';
-
-                if (this.selectedElement) {
-                    if (layout === 'none') {
-                        this.selectedElement.style.display = '';
-                    } else if (layout === 'flex') {
-                        this.selectedElement.style.display = 'flex';
-                        this.applyFlexboxStyles();
-                    } else if (layout === 'grid') {
-                        this.selectedElement.style.display = 'grid';
-                        this.applyGridStyles();
-                    }
-                    this.saveToHistory(`레이아웃 변경: ${layout}`, true);
-                }
-            });
-        });
-
-        // Flexbox 옵션 변경
-        ['flexDirection', 'justifyContent', 'alignItems', 'flexWrap', 'flexGap'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('change', () => this.applyFlexboxStyles());
-            }
-        });
-
-        // Grid 옵션 변경
-        ['gridCols', 'gridRows', 'gridColGap', 'gridRowGap', 'gridJustifyItems'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('change', () => this.applyGridStyles());
-            }
-        });
-    }
-
-    applyFlexboxStyles() {
-        if (!this.selectedElement) return;
-
-        const direction = document.getElementById('flexDirection').value;
-        const justify = document.getElementById('justifyContent').value;
-        const align = document.getElementById('alignItems').value;
-        const wrap = document.getElementById('flexWrap').value;
-        const gap = document.getElementById('flexGap').value;
-
-        this.selectedElement.style.display = 'flex';
-        this.selectedElement.style.flexDirection = direction;
-        this.selectedElement.style.justifyContent = justify;
-        this.selectedElement.style.alignItems = align;
-        this.selectedElement.style.flexWrap = wrap;
-        this.selectedElement.style.gap = `${gap}px`;
-
-        this.saveToHistory('Flexbox 스타일 변경', false);
-    }
-
-    applyGridStyles() {
-        if (!this.selectedElement) return;
-
-        const cols = document.getElementById('gridCols').value;
-        const rows = document.getElementById('gridRows').value;
-        const colGap = document.getElementById('gridColGap').value;
-        const rowGap = document.getElementById('gridRowGap').value;
-        const justifyItems = document.getElementById('gridJustifyItems').value;
-
-        this.selectedElement.style.display = 'grid';
-        this.selectedElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        this.selectedElement.style.gridTemplateRows = `repeat(${rows}, auto)`;
-        this.selectedElement.style.columnGap = `${colGap}px`;
-        this.selectedElement.style.rowGap = `${rowGap}px`;
-        this.selectedElement.style.justifyItems = justifyItems;
-
-        this.saveToHistory('Grid 스타일 변경', false);
     }
 
     // ============== AI 모달 이벤트 바인딩 ==============
@@ -819,120 +744,6 @@ class HTMLLiveEditor {
 
         this.selectedElement.style[property] = value;
         this.saveToHistory(`스타일 변경: ${property}`, false);
-    }
-
-    applyStylePreset(preset) {
-        if (!this.selectedElement) {
-            this.showToast('먼저 요소를 선택해주세요.', 'warning');
-            return;
-        }
-
-        const presets = {
-            'glassmorphism': {
-                background: 'rgba(255, 255, 255, 0.25)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
-            },
-            'neumorphism': {
-                background: '#e0e5ec',
-                borderRadius: '20px',
-                boxShadow: '9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5)',
-                border: 'none'
-            },
-            'flat': {
-                background: '#3498db',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                boxShadow: 'none'
-            },
-            'gradient-card': {
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: '#ffffff',
-                borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(102, 126, 234, 0.4)',
-                border: 'none'
-            },
-            'shadow-depth': {
-                background: '#ffffff',
-                borderRadius: '8px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                border: 'none'
-            },
-            'outline': {
-                background: 'transparent',
-                border: '2px solid #333333',
-                borderRadius: '8px',
-                boxShadow: 'none'
-            },
-            // Framer 스타일 프리셋
-            'framer-card': {
-                background: '#ffffff',
-                borderRadius: '16px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                padding: '24px',
-                border: '1px solid rgba(0, 0, 0, 0.05)'
-            },
-            'framer-button': {
-                background: '#0055ff',
-                color: '#ffffff',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                border: 'none',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-            },
-            'framer-input': {
-                background: '#f7f7f7',
-                border: '1px solid #e5e5e5',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                fontSize: '14px',
-                outline: 'none',
-                transition: 'border-color 0.2s ease'
-            },
-            'framer-badge': {
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: '#ffffff',
-                borderRadius: '100px',
-                padding: '4px 12px',
-                fontSize: '12px',
-                fontWeight: '600',
-                display: 'inline-block'
-            },
-            'framer-avatar': {
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontWeight: '600'
-            },
-            'framer-tooltip': {
-                background: '#1a1a1a',
-                color: '#ffffff',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '12px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-            }
-        };
-
-        const styles = presets[preset];
-        if (styles) {
-            Object.entries(styles).forEach(([prop, val]) => {
-                this.selectedElement.style[prop] = val;
-            });
-            this.saveToHistory(`프리셋 적용: ${preset}`, true);
-            this.showToast(`${preset} 스타일이 적용되었습니다.`, 'success');
-        }
     }
 
     // ============== AI 스타일 변환 ==============

@@ -14,7 +14,7 @@
         <div class="upload-container">
             <div class="upload-icon">📄</div>
             <h1>HTML Live Editor Pro</h1>
-            <p>HTML 파일을 업로드하여 실시간으로 편집하세요</p>
+            <p>최고의 HTML 편집 경험 — 템플릿, 아이콘 에셋, 외부 에디터 연동까지 한 번에</p>
 
             <div class="drop-zone" id="dropZone">
                 <div class="drop-zone-content">
@@ -24,6 +24,26 @@
                     </button>
                     <small>지원 형식: .html, .htm</small>
                 </div>
+            </div>
+
+            <div class="start-options">
+                <button class="start-option-btn" id="startBlankBtn">
+                    <span class="icon">✨</span>
+                    <div>빈 페이지에서 시작</div>
+                </button>
+                <button class="start-option-btn" id="startSampleBtn">
+                    <span class="icon">🎨</span>
+                    <div>샘플 템플릿으로 시작</div>
+                </button>
+                <button class="start-option-btn" id="startPickBtn">
+                    <span class="icon">📂</span>
+                    <div>로컬 파일 열기 (Chromium)</div>
+                </button>
+            </div>
+
+            <div class="recent-files" id="recentFiles" style="display:none;">
+                <h4>최근 파일</h4>
+                <div id="recentFilesList"></div>
             </div>
         </div>
     </div>
@@ -51,19 +71,82 @@
 
         <!-- 오른쪽 버튼들 -->
         <div class="action-buttons">
-            <button id="aiStyleBtn" class="ai-btn" title="AI 스타일 변환">
-                🤖 AI 스타일
+            <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)">⌘</button>
+            <button id="templatesBtn" class="gs-toolbar-btn" title="템플릿 라이브러리">🧩 템플릿</button>
+            <button id="assetsBtn" class="gs-toolbar-btn" title="에셋 팔레트 (아이콘·이미지·그라디언트)">🎨 에셋</button>
+            <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인">🕐</button>
+
+            <span class="gs-divider"></span>
+
+            <!-- 원본 편집 드롭다운 -->
+            <div class="gs-dropdown" id="openInEditorDropdown">
+                <button class="gs-toolbar-btn" id="openInEditorBtn" title="외부 에디터 / 브라우저 내장 에디터로 원본 열기 (Ctrl+Shift+O)">
+                    💻 원본 편집 <span class="chev">▾</span>
+                </button>
+                <div class="gs-dropdown-menu">
+                    <div class="gs-dropdown-section">외부 에디터 (URL 스킴)</div>
+                    <div class="gs-dropdown-item" data-editor="vscode">
+                        <span>🆚</span> VS Code 로 열기
+                    </div>
+                    <div class="gs-dropdown-item" data-editor="cursor">
+                        <span>✨</span> Cursor 로 열기
+                    </div>
+                    <div class="gs-dropdown-item" data-editor="sublime">
+                        <span>🟠</span> Sublime Text
+                    </div>
+                    <div class="gs-dropdown-item" data-editor="webstorm">
+                        <span>🟣</span> WebStorm / JetBrains
+                    </div>
+                    <div class="gs-dropdown-divider"></div>
+                    <div class="gs-dropdown-item" data-editor="monaco">
+                        <span>🧠</span> 브라우저 내장 Monaco
+                        <span class="kbd">Ctrl+Shift+O</span>
+                    </div>
+                    <div class="gs-dropdown-divider"></div>
+                    <div class="gs-dropdown-item" data-editor="set-path">
+                        <span>📁</span> 로컬 경로 설정…
+                    </div>
+                </div>
+            </div>
+
+            <button id="aiStyleBtn" class="gs-toolbar-btn" title="AI 스타일 변환">
+                🤖 AI
             </button>
-            <button id="downloadBtn" class="download-btn">
+            <button id="downloadBtn" class="gs-toolbar-btn primary" title="편집된 HTML 다운로드">
                 📥 다운로드
             </button>
-            <button id="undoBtn" class="undo-btn" title="되돌리기 (Ctrl+Z)" disabled>
-                ↶ 되돌리기
-            </button>
-            <button id="redoBtn" class="redo-btn" title="다시실행 (Ctrl+Y)" disabled>
-                ↷ 다시실행
-            </button>
+
+            <span class="gs-divider"></span>
+
+            <button id="undoBtn" class="gs-icon-btn" title="되돌리기 (Ctrl+Z)" disabled>↶</button>
+            <button id="redoBtn" class="gs-icon-btn" title="다시실행 (Ctrl+Y)" disabled>↷</button>
+            <button id="shortcutBtn" class="gs-icon-btn" title="단축키 가이드 (?)">?</button>
+            <button id="themeToggleBtn" class="gs-icon-btn" title="다크 / 라이트 테마">🌙</button>
         </div>
+    </div>
+
+    <!-- 반응형 뷰포트 스위처 -->
+    <div class="viewport-switcher" id="viewportSwitcher" style="display: none;">
+        <button class="viewport-btn active" data-viewport="full" title="전체 화면">
+            🖥 <span class="viewport-size-label">전체</span>
+        </button>
+        <button class="viewport-btn" data-viewport="desktop" title="데스크톱 1440">
+            💻 <span class="viewport-size-label">1440</span>
+        </button>
+        <button class="viewport-btn" data-viewport="tablet" title="태블릿 768">
+            📱 <span class="viewport-size-label">768</span>
+        </button>
+        <button class="viewport-btn" data-viewport="mobile" title="모바일 375">
+            📱 <span class="viewport-size-label">375</span>
+        </button>
+    </div>
+
+    <!-- 자동 저장 복구 배너 -->
+    <div class="autosave-banner" id="autosaveBanner" style="display: none;">
+        <span>⏱</span>
+        <span><strong>자동 저장본</strong>이 발견됐습니다. <span id="autosaveTime"></span></span>
+        <button class="gs-toolbar-btn primary" id="autosaveRestoreBtn">복구</button>
+        <button class="gs-toolbar-btn" id="autosaveDismissBtn">무시</button>
     </div>
 
     <!-- DOM 네비게이터 (브레드크럼) -->
@@ -256,119 +339,6 @@
                 </div>
             </div>
 
-            <!-- 스타일 프리셋 -->
-            <div class="style-section">
-                <label class="style-label">스타일 프리셋</label>
-                <div class="preset-buttons">
-                    <button class="preset-btn" data-preset="glassmorphism">글래스모피즘</button>
-                    <button class="preset-btn" data-preset="neumorphism">뉴모피즘</button>
-                    <button class="preset-btn" data-preset="flat">플랫</button>
-                    <button class="preset-btn" data-preset="gradient-card">그라데이션 카드</button>
-                    <button class="preset-btn" data-preset="shadow-depth">깊은 그림자</button>
-                    <button class="preset-btn" data-preset="outline">아웃라인</button>
-                </div>
-            </div>
-
-            <!-- Framer 스타일 프리셋 -->
-            <div class="style-section">
-                <label class="style-label">Framer 스타일</label>
-                <div class="preset-buttons framer-presets">
-                    <button class="preset-btn framer" data-preset="framer-card">카드</button>
-                    <button class="preset-btn framer" data-preset="framer-button">버튼</button>
-                    <button class="preset-btn framer" data-preset="framer-input">인풋</button>
-                    <button class="preset-btn framer" data-preset="framer-badge">뱃지</button>
-                    <button class="preset-btn framer" data-preset="framer-avatar">아바타</button>
-                    <button class="preset-btn framer" data-preset="framer-tooltip">툴팁</button>
-                </div>
-            </div>
-
-            <!-- 레이아웃 (Flexbox/Grid) -->
-            <div class="style-section">
-                <label class="style-label">레이아웃</label>
-                <div class="layout-tabs">
-                    <button class="layout-tab active" data-layout="none">없음</button>
-                    <button class="layout-tab" data-layout="flex">Flexbox</button>
-                    <button class="layout-tab" data-layout="grid">Grid</button>
-                </div>
-
-                <!-- Flexbox 옵션 -->
-                <div class="layout-options" id="flexOptions" style="display: none;">
-                    <div class="style-row">
-                        <label>방향</label>
-                        <select id="flexDirection" class="style-select">
-                            <option value="row">가로 (row)</option>
-                            <option value="row-reverse">가로 역순</option>
-                            <option value="column">세로 (column)</option>
-                            <option value="column-reverse">세로 역순</option>
-                        </select>
-                    </div>
-                    <div class="style-row">
-                        <label>가로 정렬</label>
-                        <select id="justifyContent" class="style-select">
-                            <option value="flex-start">시작</option>
-                            <option value="center">가운데</option>
-                            <option value="flex-end">끝</option>
-                            <option value="space-between">균등 (양끝)</option>
-                            <option value="space-around">균등 (여백)</option>
-                            <option value="space-evenly">균등 (동일)</option>
-                        </select>
-                    </div>
-                    <div class="style-row">
-                        <label>세로 정렬</label>
-                        <select id="alignItems" class="style-select">
-                            <option value="stretch">늘리기</option>
-                            <option value="flex-start">시작</option>
-                            <option value="center">가운데</option>
-                            <option value="flex-end">끝</option>
-                            <option value="baseline">베이스라인</option>
-                        </select>
-                    </div>
-                    <div class="style-row">
-                        <label>줄바꿈</label>
-                        <select id="flexWrap" class="style-select">
-                            <option value="nowrap">안함</option>
-                            <option value="wrap">줄바꿈</option>
-                            <option value="wrap-reverse">역순 줄바꿈</option>
-                        </select>
-                    </div>
-                    <div class="style-row">
-                        <label>간격</label>
-                        <input type="number" id="flexGap" class="style-input-small" value="0" min="0">
-                        <span class="style-unit">px</span>
-                    </div>
-                </div>
-
-                <!-- Grid 옵션 -->
-                <div class="layout-options" id="gridOptions" style="display: none;">
-                    <div class="style-row">
-                        <label>열 개수</label>
-                        <input type="number" id="gridCols" class="style-input-small" value="3" min="1" max="12">
-                    </div>
-                    <div class="style-row">
-                        <label>행 개수</label>
-                        <input type="number" id="gridRows" class="style-input-small" value="2" min="1" max="12">
-                    </div>
-                    <div class="style-row">
-                        <label>열 간격</label>
-                        <input type="number" id="gridColGap" class="style-input-small" value="10" min="0">
-                        <span class="style-unit">px</span>
-                    </div>
-                    <div class="style-row">
-                        <label>행 간격</label>
-                        <input type="number" id="gridRowGap" class="style-input-small" value="10" min="0">
-                        <span class="style-unit">px</span>
-                    </div>
-                    <div class="style-row">
-                        <label>항목 정렬</label>
-                        <select id="gridJustifyItems" class="style-select">
-                            <option value="stretch">늘리기</option>
-                            <option value="start">시작</option>
-                            <option value="center">가운데</option>
-                            <option value="end">끝</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -458,6 +428,11 @@
     <div class="context-menu" id="contextMenu" style="display: none;">
         <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
         <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="select-same-tag">🧲 같은 태그 모두 선택</div>
+        <div class="context-menu-item" data-action="select-tag-class">🧲 태그+클래스 일치 선택</div>
+        <div class="context-menu-item" data-action="select-siblings">🧲 형제 모두 선택</div>
+        <div class="context-menu-item" data-action="select-descendants">🧲 하위 동일 태그 전체</div>
+        <div class="context-menu-separator"></div>
         <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
         <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
         <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
@@ -492,8 +467,165 @@
         <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
         <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
         <button class="toolbar-btn" data-action="style" title="스타일 편집">🎨</button>
+        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)">🧲</button>
         <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
         <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
+    </div>
+
+    <!-- 유사 선택 드롭다운 -->
+    <div class="similar-dropdown" id="similarDropdown">
+        <div class="similar-option" data-scope="tag">같은 태그 전체 <span class="count" id="similarCountTag">0</span></div>
+        <div class="similar-option" data-scope="tag-class">태그+클래스 일치 <span class="count" id="similarCountTagClass">0</span></div>
+        <div class="similar-option" data-scope="class">클래스 공유 <span class="count" id="similarCountClass">0</span></div>
+        <div class="similar-option" data-scope="siblings">같은 부모의 형제 <span class="count" id="similarCountSiblings">0</span></div>
+        <div class="similar-option" data-scope="descendants-same-tag">하위 동일 태그 <span class="count" id="similarCountDesc">0</span></div>
+    </div>
+
+    <!-- 템플릿 라이브러리 패널 -->
+    <div class="template-panel" id="templatePanel">
+        <div class="template-panel-header">
+            <h3>🧩 Gluestack 템플릿</h3>
+            <button class="gs-icon-btn" id="templatePanelClose" title="닫기">×</button>
+        </div>
+        <div class="template-tabs">
+            <button class="template-tab active" data-category="component">컴포넌트</button>
+            <button class="template-tab" data-category="section">섹션</button>
+            <button class="template-tab" data-category="page">페이지</button>
+        </div>
+        <div class="template-search">
+            <input type="text" id="templateSearch" placeholder="🔍 템플릿 검색...">
+        </div>
+        <div class="template-grid" id="templateGrid"></div>
+    </div>
+
+    <!-- 에셋 팔레트 -->
+    <div class="asset-panel" id="assetPanel">
+        <div class="asset-panel-header">
+            <h3>🎨 에셋 라이브러리</h3>
+            <button class="gs-icon-btn" id="assetPanelClose" title="닫기">×</button>
+        </div>
+        <div class="asset-tabs">
+            <button class="asset-tab active" data-asset="icon">아이콘</button>
+            <button class="asset-tab" data-asset="image">이미지</button>
+            <button class="asset-tab" data-asset="gradient">그라디언트</button>
+            <button class="asset-tab" data-asset="color">색상</button>
+        </div>
+        <div class="asset-body" id="assetBody">
+            <!-- 아이콘 탭 기본 -->
+            <div class="asset-search-row" id="assetIconSearchRow">
+                <input type="text" id="iconSearch" placeholder="🔍 아이콘 검색 (예: check, heart, arrow)...">
+            </div>
+            <div class="icon-grid" id="iconGrid"></div>
+            <div class="icon-controls" id="iconControls" style="display:none;">
+                <div>
+                    <label>크기 <span class="value-chip" id="iconSizeValue">24px</span></label>
+                    <input type="range" id="iconSize" min="12" max="96" value="24">
+                </div>
+                <div>
+                    <label>두께 <span class="value-chip" id="iconStrokeValue">2</span></label>
+                    <input type="range" id="iconStroke" min="1" max="3" step="0.5" value="2">
+                </div>
+                <div style="grid-column: span 2;">
+                    <label>색상</label>
+                    <input type="color" id="iconColor" value="#0f172a" style="width:100%; height:32px; border:none; border-radius:6px; background:transparent;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 히스토리 타임라인 패널 -->
+    <div class="history-panel" id="historyPanel">
+        <div class="template-panel-header">
+            <h3>🕐 히스토리</h3>
+            <button class="gs-icon-btn" id="historyPanelClose" title="닫기">×</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- 명령 팔레트 -->
+    <div class="command-palette-overlay" id="commandPaletteOverlay" style="display: none;">
+        <div class="command-palette" role="dialog" aria-label="명령 팔레트">
+            <input type="text" id="commandPaletteInput" class="command-palette-input" placeholder="⌨️  명령 검색... (예: 삭제, 템플릿, 다크모드)" autocomplete="off">
+            <div class="command-palette-list" id="commandPaletteList"></div>
+        </div>
+    </div>
+
+    <!-- 단축키 가이드 모달 -->
+    <div class="modal-overlay shortcuts-modal" id="shortcutsModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⌨️ 단축키 가이드</h2>
+                <button class="modal-close" id="shortcutsModalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcut-group">
+                    <h4>편집기 전환</h4>
+                    <div class="shortcut-row"><span>명령 팔레트</span><div class="keys"><span class="key">Ctrl</span><span class="key">K</span></div></div>
+                    <div class="shortcut-row"><span>단축키 가이드</span><div class="keys"><span class="key">?</span></div></div>
+                    <div class="shortcut-row"><span>원본 편집 (기본 에디터)</span><div class="keys"><span class="key">Ctrl</span><span class="key">Shift</span><span class="key">O</span></div></div>
+                    <div class="shortcut-row"><span>다크/라이트 테마</span><div class="keys"><span class="key">Ctrl</span><span class="key">Shift</span><span class="key">L</span></div></div>
+                </div>
+                <div class="shortcut-group">
+                    <h4>요소 편집</h4>
+                    <div class="shortcut-row"><span>되돌리기 / 다시실행</span><div class="keys"><span class="key">Ctrl</span><span class="key">Z</span> / <span class="key">Ctrl</span><span class="key">Y</span></div></div>
+                    <div class="shortcut-row"><span>위 / 아래 이동</span><div class="keys"><span class="key">↑</span> / <span class="key">↓</span></div></div>
+                    <div class="shortcut-row"><span>복제</span><div class="keys"><span class="key">Ctrl</span><span class="key">D</span></div></div>
+                    <div class="shortcut-row"><span>삭제</span><div class="keys"><span class="key">Delete</span></div></div>
+                </div>
+                <div class="shortcut-group">
+                    <h4>선택</h4>
+                    <div class="shortcut-row"><span>다중 선택 추가</span><div class="keys"><span class="key">Shift</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>동일 태그+클래스 일괄</span><div class="keys"><span class="key">Alt</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>범위 선택 (형제)</span><div class="keys"><span class="key">Ctrl</span><span class="key">Shift</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>모든 같은 태그</span><div class="keys"><span class="key">Ctrl</span><span class="key">A</span></div></div>
+                </div>
+                <div class="shortcut-group">
+                    <h4>탐색</h4>
+                    <div class="shortcut-row"><span>부모로</span><div class="keys"><span class="key">P</span></div></div>
+                    <div class="shortcut-row"><span>자식으로</span><div class="keys"><span class="key">C</span></div></div>
+                    <div class="shortcut-row"><span>형제 이전/다음</span><div class="keys"><span class="key">←</span> / <span class="key">→</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco 에디터 모달 -->
+    <div class="modal-overlay monaco-modal" id="monacoModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🧠 Monaco 원본 편집기</h2>
+                <div style="display:flex; gap:8px;">
+                    <button class="gs-toolbar-btn" id="monacoReloadBtn" title="iframe 새로고침">↻ 미리보기</button>
+                    <button class="gs-toolbar-btn primary" id="monacoSaveBtn" title="저장 (Ctrl+S)">💾 저장</button>
+                    <button class="gs-icon-btn" id="monacoModalClose">×</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="monacoEditorHost"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 경로 설정 모달 -->
+    <div class="modal-overlay" id="pathModal" style="display: none;">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>📁 로컬 파일 경로 설정</h2>
+                <button class="modal-close" id="pathModalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--gs-text-muted); font-size: 13px; margin-bottom: 10px;">외부 에디터(VS Code, Cursor 등)에서 이 파일을 열려면 절대 경로를 알려주세요.</p>
+                <div class="style-section">
+                    <label class="style-label">파일 경로</label>
+                    <input type="text" id="pathInput" class="style-input" placeholder="/Users/me/project/index.html" style="width:100%;">
+                </div>
+                <p style="color: var(--gs-text-subtle); font-size: 11px; margin-top: 8px;">예) <code>/Users/me/site/index.html</code>, <code>C:\\Users\\me\\site\\index.html</code></p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="pathCancelBtn">취소</button>
+                <button class="modal-btn primary" id="pathSaveBtn">저장</button>
+            </div>
+        </div>
     </div>
 
     <!-- 토스트 메시지 -->
