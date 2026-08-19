@@ -351,6 +351,8 @@ class HTMLLiveEditor {
         this.uploadScreen.style.display = 'none';
         this.previewFrame.style.display = 'block';
         this.topButtons.style.display = 'flex';
+        const viewportSwitcher = document.getElementById('viewportSwitcher');
+        if (viewportSwitcher) viewportSwitcher.style.display = 'flex';
 
         this.modeIndicator.textContent = '🔧 요소편집';
         this.modeIndicator.style.color = '#007bff';
@@ -1106,28 +1108,7 @@ ${html.substring(0, 3000)}
     setupEditableListeners(doc) {
         if (!doc) return;
 
-        const editableElements = doc.querySelectorAll('.editable-text');
-
-        editableElements.forEach(element => {
-            element.addEventListener('focus', () => {
-                element.classList.add('editing');
-            });
-
-            element.addEventListener('blur', () => {
-                element.classList.remove('editing');
-            });
-
-            element.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    element.blur();
-                }
-            });
-
-            element.addEventListener('input', () => {
-                this.saveToHistory('텍스트 편집', false);
-            });
-        });
+        doc.querySelectorAll('.editable-text').forEach(element => this.bindEditableSpan(element));
     }
 
     // ============== 히스토리 시스템 ==============
@@ -1446,20 +1427,67 @@ ${html.substring(0, 3000)}
         } else {
             this.redoBtn.title = '다시실행 (Ctrl+Y)';
         }
+
+        this.renderHistoryPanel();
+    }
+
+    // 부모 문서의 입력 요소에 포커스가 있으면 편집 단축키를 가로채지 않음
+    isTypingContext(event) {
+        const target = event.target;
+        if (!target || !target.closest) return false;
+        return !!target.closest('input, textarea, select, [contenteditable="true"]');
     }
 
     handleKeydown(event) {
-        if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
-            event.preventDefault();
-            this.undo();
-        } else if (event.ctrlKey && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
-            event.preventDefault();
-            this.redo();
-        } else if (event.key === 'Escape') {
+        const typing = this.isTypingContext(event);
+
+        // Escape: 어디서든 열린 UI 닫기
+        if (event.key === 'Escape') {
+            if (this.commandPaletteVisible) {
+                this.closeCommandPalette();
+                return;
+            }
             this.hideStylePanel();
             this.hideAIModal();
             this.hideContextualMenus();
-            this.clearMultiSelection();
+            this.hideShortcutsModal();
+            this.hidePathModal();
+            this.closeSidePanels();
+            this.closeEditorDropdown();
+            if (!typing) this.clearMultiSelection();
+            return;
+        }
+
+        // Ctrl+K: 명령 팔레트 (입력 중에도 허용)
+        if (event.ctrlKey && !event.shiftKey && (event.key === 'k' || event.key === 'K')) {
+            event.preventDefault();
+            this.toggleCommandPalette();
+            return;
+        }
+
+        // 입력 중에는 브라우저 기본 동작(텍스트 undo, 문자 입력 등)을 존중
+        if (typing) return;
+
+        if (event.ctrlKey && event.shiftKey && (event.key === 'l' || event.key === 'L')) {
+            event.preventDefault();
+            this.toggleTheme();
+        } else if (event.ctrlKey && event.shiftKey && (event.key === 'o' || event.key === 'O')) {
+            event.preventDefault();
+            this.openInExternalEditor(this.preferredEditor);
+        } else if (event.ctrlKey && !event.shiftKey && (event.key === 'd' || event.key === 'D')) {
+            if (this.selectedElement) {
+                event.preventDefault();
+                this.duplicateElement();
+            }
+        } else if (event.ctrlKey && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+            event.preventDefault();
+            this.undo();
+        } else if (event.ctrlKey && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) {
+            event.preventDefault();
+            this.redo();
+        } else if (event.key === '?') {
+            event.preventDefault();
+            this.showShortcutsModal();
         } else if (event.key === 'p' || event.key === 'P') {
             // P: 부모 요소 선택
             if (!event.ctrlKey && !event.altKey && this.selectedElement) {
@@ -1480,6 +1508,14 @@ ${html.substring(0, 3000)}
             // 오른쪽 화살표: 다음 형제
             event.preventDefault();
             this.navigateToNextSibling();
+        } else if (event.key === 'ArrowUp' && !event.ctrlKey && this.selectedElement) {
+            // 위 화살표: 요소를 위로 이동
+            event.preventDefault();
+            this.moveElement(this.selectedElement, 'up');
+        } else if (event.key === 'ArrowDown' && !event.ctrlKey && this.selectedElement) {
+            // 아래 화살표: 요소를 아래로 이동
+            event.preventDefault();
+            this.moveElement(this.selectedElement, 'down');
         } else if (event.key === 'Delete' && this.selectedElement) {
             // Delete: 요소 삭제
             event.preventDefault();
@@ -1987,6 +2023,12 @@ ${html.substring(0, 3000)}
         if (!this.tableContextMenu.contains(event.target)) {
             this.tableContextMenu.style.display = 'none';
         }
+
+        // 원본 편집 드롭다운: 바깥 클릭 시 닫기
+        const dropdown = document.getElementById('openInEditorDropdown');
+        if (dropdown && !dropdown.contains(event.target)) {
+            dropdown.classList.remove('open');
+        }
     }
 
     handleContextMenuClick(event) {
@@ -2482,7 +2524,723 @@ ${html.substring(0, 3000)}
             this.downloadBtn.style.background = '';
         }, 1500);
     }
+
+    // ============== 테마 ==============
+    initTheme() {
+        this.themeToggleBtn = document.getElementById('themeToggleBtn');
+        this.applyTheme(localStorage.getItem('editorTheme') || 'light');
+
+        if (this.themeToggleBtn) {
+            this.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
+        }
+    }
+
+    applyTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        localStorage.setItem('editorTheme', theme);
+
+        if (this.themeToggleBtn) {
+            this.themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            this.themeToggleBtn.title = theme === 'dark' ? '라이트 테마로 전환 (Ctrl+Shift+L)' : '다크 테마로 전환 (Ctrl+Shift+L)';
+        }
+    }
+
+    toggleTheme() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        this.applyTheme(isDark ? 'light' : 'dark');
+    }
+
+    // ============== Gluestack 신규 모듈 초기화 ==============
+    initGluestackModules() {
+        this.bindStartOptions();
+        this.bindSidePanels();
+        this.bindTemplateLibrary();
+        this.bindCommandPalette();
+        this.bindViewportSwitcher();
+        this.bindEditorDropdown();
+        this.bindPathModal();
+        this.bindShortcutsModal();
+    }
+
+    getPreviewDoc() {
+        try {
+            if (this.previewFrame.style.display === 'none') return null;
+            return this.previewFrame.contentDocument || this.previewFrame.contentWindow.document;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ============== 시작 화면 옵션 ==============
+    bindStartOptions() {
+        const blankBtn = document.getElementById('startBlankBtn');
+        const sampleBtn = document.getElementById('startSampleBtn');
+        const pickBtn = document.getElementById('startPickBtn');
+
+        if (blankBtn) {
+            blankBtn.addEventListener('click', () => this.loadFromString(GS_BLANK_HTML, 'untitled.html'));
+        }
+        if (sampleBtn) {
+            sampleBtn.addEventListener('click', () => this.loadFromString(GS_SAMPLE_HTML, 'sample.html'));
+        }
+        if (pickBtn) {
+            // File System Access API 미지원 브라우저에서는 옵션 숨김
+            if (!window.showOpenFilePicker) {
+                pickBtn.style.display = 'none';
+            } else {
+                pickBtn.addEventListener('click', () => this.pickLocalFile());
+            }
+        }
+    }
+
+    loadFromString(html, name) {
+        this.currentFileName = name;
+        this.fileName.textContent = name;
+        this.originalHTML = html;
+        this.loadHTMLToEditor();
+    }
+
+    async pickLocalFile() {
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{ description: 'HTML 파일', accept: { 'text/html': ['.html', '.htm'] } }]
+            });
+            this.fileHandle = handle;
+            const file = await handle.getFile();
+            const text = await file.text();
+            this.loadFromString(text, file.name);
+        } catch (error) {
+            if (error && error.name !== 'AbortError') {
+                console.error('파일 열기 오류:', error);
+                this.showToast('파일을 여는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+    }
+
+    // ============== 사이드 패널 (템플릿 / 히스토리) ==============
+    bindSidePanels() {
+        this.templatePanel = document.getElementById('templatePanel');
+        this.historyPanel = document.getElementById('historyPanel');
+        this.assetPanel = document.getElementById('assetPanel');
+
+        const templatesBtn = document.getElementById('templatesBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const templateClose = document.getElementById('templatePanelClose');
+        const historyClose = document.getElementById('historyPanelClose');
+        const assetClose = document.getElementById('assetPanelClose');
+
+        if (templatesBtn) {
+            templatesBtn.addEventListener('click', () => this.toggleSidePanel(this.templatePanel));
+        }
+        if (historyBtn) {
+            historyBtn.addEventListener('click', () => {
+                this.toggleSidePanel(this.historyPanel);
+                this.renderHistoryPanel();
+            });
+        }
+        if (templateClose) templateClose.addEventListener('click', () => this.templatePanel.classList.remove('open'));
+        if (historyClose) historyClose.addEventListener('click', () => this.historyPanel.classList.remove('open'));
+        if (assetClose) assetClose.addEventListener('click', () => this.assetPanel.classList.remove('open'));
+    }
+
+    toggleSidePanel(panel) {
+        if (!panel) return;
+        const wasOpen = panel.classList.contains('open');
+        this.closeSidePanels();
+        if (!wasOpen) panel.classList.add('open');
+    }
+
+    closeSidePanels() {
+        [this.templatePanel, this.historyPanel, this.assetPanel].forEach(panel => {
+            if (panel) panel.classList.remove('open');
+        });
+    }
+
+    // ============== 템플릿 라이브러리 ==============
+    bindTemplateLibrary() {
+        this.templateGrid = document.getElementById('templateGrid');
+        this.templateSearchInput = document.getElementById('templateSearch');
+
+        document.querySelectorAll('.template-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.template-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.activeTemplateCategory = tab.dataset.category;
+                this.renderTemplateGrid();
+            });
+        });
+
+        if (this.templateSearchInput) {
+            this.templateSearchInput.addEventListener('input', () => this.renderTemplateGrid());
+        }
+
+        this.renderTemplateGrid();
+    }
+
+    renderTemplateGrid() {
+        if (!this.templateGrid) return;
+
+        const query = (this.templateSearchInput ? this.templateSearchInput.value : '').trim().toLowerCase();
+        const items = GS_TEMPLATES.filter(t =>
+            t.category === this.activeTemplateCategory &&
+            (!query || t.name.toLowerCase().includes(query) || t.desc.toLowerCase().includes(query))
+        );
+
+        this.templateGrid.innerHTML = '';
+
+        if (items.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'command-palette-empty';
+            empty.textContent = '일치하는 템플릿이 없습니다.';
+            this.templateGrid.appendChild(empty);
+            return;
+        }
+
+        items.forEach(template => {
+            const card = document.createElement('div');
+            card.className = 'template-card';
+
+            const preview = document.createElement('div');
+            preview.className = 'template-card-preview';
+            preview.innerHTML = template.html;
+
+            const name = document.createElement('div');
+            name.className = 'template-card-name';
+            name.textContent = template.name;
+
+            const desc = document.createElement('div');
+            desc.className = 'template-card-desc';
+            desc.textContent = template.desc;
+
+            card.appendChild(preview);
+            card.appendChild(name);
+            card.appendChild(desc);
+            card.addEventListener('click', () => this.insertTemplate(template));
+
+            this.templateGrid.appendChild(card);
+        });
+    }
+
+    insertTemplate(template) {
+        const doc = this.getPreviewDoc();
+        if (!doc || !doc.body) {
+            this.showToast('먼저 문서를 열어주세요.', 'warning');
+            return;
+        }
+
+        const container = doc.createElement('div');
+        container.innerHTML = template.html;
+        const nodes = Array.from(container.children);
+
+        if (nodes.length === 0) return;
+
+        // 선택된 요소 뒤에 삽입, 없으면 body 끝에 추가
+        let anchor = (this.selectedElement && this.selectedElement.ownerDocument === doc && this.selectedElement.parentNode)
+            ? this.selectedElement
+            : null;
+
+        nodes.forEach(node => {
+            if (anchor) {
+                anchor.parentNode.insertBefore(node, anchor.nextSibling);
+                anchor = node;
+            } else {
+                doc.body.appendChild(node);
+            }
+        });
+
+        // 삽입된 콘텐츠를 편집 가능하게 처리
+        // (요소 선택은 body 이벤트 위임이 이미 커버하므로 텍스트 편집 바인딩만 수행)
+        nodes.forEach(node => {
+            this.processTextNodes(node);
+            node.querySelectorAll('.editable-text').forEach(span => this.bindEditableSpan(span));
+        });
+
+        this.selectElement(nodes[0]);
+        nodes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.saveToHistory(`템플릿 삽입: ${template.name}`, true);
+        this.showToast(`"${template.name}" 템플릿이 삽입되었습니다.`, 'success');
+    }
+
+    bindEditableSpan(span) {
+        // DOM 속성 대신 WeakSet 사용: 속성은 히스토리 스냅샷에 저장되어
+        // 복원된 새 문서에서 리스너 바인딩을 건너뛰게 만듦
+        if (!this.boundEditableSpans) this.boundEditableSpans = new WeakSet();
+        if (this.boundEditableSpans.has(span)) return;
+        this.boundEditableSpans.add(span);
+
+        span.addEventListener('focus', () => span.classList.add('editing'));
+        span.addEventListener('blur', () => span.classList.remove('editing'));
+        span.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                span.blur();
+            }
+        });
+        span.addEventListener('input', () => this.saveToHistory('텍스트 편집', false));
+    }
+
+    // ============== 히스토리 타임라인 패널 ==============
+    renderHistoryPanel() {
+        const list = document.getElementById('historyList');
+        if (!list || !this.historyPanel || !this.historyPanel.classList.contains('open')) return;
+
+        list.innerHTML = '';
+
+        if (this.history.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'command-palette-empty';
+            empty.textContent = '아직 편집 기록이 없습니다.';
+            list.appendChild(empty);
+            return;
+        }
+
+        // 최신 항목이 위로 오도록 역순 렌더링
+        for (let i = this.history.length - 1; i >= 0; i--) {
+            const snapshot = this.history[i];
+            const entry = document.createElement('div');
+            entry.className = 'history-entry' + (i === this.historyIndex ? ' current' : '');
+
+            const time = document.createElement('span');
+            time.className = 'time';
+            time.textContent = new Date(snapshot.timestamp).toLocaleTimeString('ko-KR', { hour12: false });
+
+            const label = document.createElement('span');
+            label.textContent = snapshot.action;
+
+            entry.appendChild(time);
+            entry.appendChild(label);
+            entry.addEventListener('click', () => this.jumpToHistory(i));
+            list.appendChild(entry);
+        }
+    }
+
+    jumpToHistory(index) {
+        if (index === this.historyIndex || index < 0 || index >= this.history.length) return;
+        this.historyIndex = index;
+        this.restoreFromHistory();
+    }
+
+    // ============== 명령 팔레트 ==============
+    bindCommandPalette() {
+        this.commandPaletteOverlay = document.getElementById('commandPaletteOverlay');
+        this.commandPaletteInput = document.getElementById('commandPaletteInput');
+        this.commandPaletteList = document.getElementById('commandPaletteList');
+        this.cpActiveIndex = 0;
+        this.cpFiltered = [];
+
+        const paletteBtn = document.getElementById('commandPaletteBtn');
+        if (paletteBtn) {
+            paletteBtn.addEventListener('click', () => this.openCommandPalette());
+        }
+
+        if (!this.commandPaletteOverlay) return;
+
+        // 배경 클릭으로 닫기
+        this.commandPaletteOverlay.addEventListener('click', (e) => {
+            if (e.target === this.commandPaletteOverlay) this.closeCommandPalette();
+        });
+
+        this.commandPaletteInput.addEventListener('input', () => {
+            this.renderCommandList(this.commandPaletteInput.value);
+        });
+
+        this.commandPaletteInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.moveCommandSelection(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.moveCommandSelection(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const command = this.cpFiltered[this.cpActiveIndex];
+                if (command) this.executeCommand(command);
+            }
+        });
+    }
+
+    getCommands() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return [
+            { icon: '↶', title: '실행 취소', desc: '마지막 편집을 되돌립니다', kbd: 'Ctrl+Z', run: () => this.undo() },
+            { icon: '↷', title: '다시 실행', desc: '되돌린 편집을 다시 적용합니다', kbd: 'Ctrl+Y', run: () => this.redo() },
+            { icon: '📥', title: 'HTML 다운로드', desc: '편집된 HTML을 파일로 저장합니다', kbd: '', run: () => this.downloadHTML() },
+            { icon: isDark ? '☀️' : '🌙', title: isDark ? '라이트 테마로 전환' : '다크 테마로 전환', desc: '에디터 UI 테마를 전환합니다', kbd: 'Ctrl+Shift+L', run: () => this.toggleTheme() },
+            { icon: '🧩', title: '템플릿 라이브러리', desc: '컴포넌트·섹션·페이지 템플릿을 삽입합니다', kbd: '', run: () => this.toggleSidePanel(this.templatePanel) },
+            { icon: '🕐', title: '히스토리 타임라인', desc: '편집 기록을 보고 특정 시점으로 이동합니다', kbd: '', run: () => { this.toggleSidePanel(this.historyPanel); this.renderHistoryPanel(); } },
+            { icon: '⌨️', title: '단축키 가이드', desc: '사용 가능한 단축키를 확인합니다', kbd: '?', run: () => this.showShortcutsModal() },
+            { icon: '🤖', title: 'AI 스타일 변환', desc: 'AI로 페이지 스타일을 변경합니다', kbd: '', run: () => this.showAIModal() },
+            { icon: '🎨', title: '스타일 패널 열기', desc: '선택한 요소의 스타일을 편집합니다', kbd: '', run: () => this.showStylePanel() },
+            { icon: '📄', title: '요소 복제', desc: '선택한 요소를 복제합니다', kbd: 'Ctrl+D', run: () => this.duplicateElement() },
+            { icon: '🗑️', title: '요소 삭제', desc: '선택한 요소를 삭제합니다', kbd: 'Del', run: () => this.deleteElement() },
+            { icon: '📦', title: 'div로 감싸기', desc: '선택한 요소를 div로 감쌉니다', kbd: '', run: () => this.wrapWithDiv() },
+            { icon: '📤', title: '감싸기 해제', desc: '선택한 요소의 자식을 밖으로 꺼냅니다', kbd: '', run: () => this.unwrapElement() },
+            { icon: '↗️', title: '부모 밖으로 이동', desc: '선택한 요소를 부모 밖으로 이동합니다', kbd: '', run: () => this.moveOutOfParent() },
+            { icon: '🖥', title: '뷰포트: 전체 화면', desc: '미리보기를 전체 너비로 표시합니다', kbd: '', run: () => this.setViewport('full') },
+            { icon: '💻', title: '뷰포트: 데스크톱 1440', desc: '1440px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('desktop') },
+            { icon: '📱', title: '뷰포트: 태블릿 768', desc: '768px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('tablet') },
+            { icon: '📱', title: '뷰포트: 모바일 375', desc: '375px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('mobile') },
+            { icon: '💻', title: '외부 에디터로 열기', desc: '설정된 에디터에서 원본 파일을 엽니다', kbd: 'Ctrl+Shift+O', run: () => this.openInExternalEditor(this.preferredEditor) },
+            { icon: '📁', title: '로컬 파일 경로 설정', desc: '외부 에디터 연동을 위한 파일 경로를 설정합니다', kbd: '', run: () => this.showPathModal() }
+        ];
+    }
+
+    openCommandPalette() {
+        if (!this.commandPaletteOverlay) return;
+        this.commandPaletteOverlay.style.display = 'flex';
+        this.commandPaletteVisible = true;
+        this.commandPaletteInput.value = '';
+        this.renderCommandList('');
+        this.commandPaletteInput.focus();
+    }
+
+    closeCommandPalette() {
+        if (!this.commandPaletteOverlay) return;
+        this.commandPaletteOverlay.style.display = 'none';
+        this.commandPaletteVisible = false;
+    }
+
+    toggleCommandPalette() {
+        if (this.commandPaletteVisible) {
+            this.closeCommandPalette();
+        } else {
+            this.openCommandPalette();
+        }
+    }
+
+    renderCommandList(query) {
+        const q = (query || '').trim().toLowerCase();
+        this.cpFiltered = this.getCommands().filter(command =>
+            !q || command.title.toLowerCase().includes(q) || command.desc.toLowerCase().includes(q)
+        );
+        this.cpActiveIndex = 0;
+
+        this.commandPaletteList.innerHTML = '';
+
+        if (this.cpFiltered.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'command-palette-empty';
+            empty.textContent = '일치하는 명령이 없습니다.';
+            this.commandPaletteList.appendChild(empty);
+            return;
+        }
+
+        this.cpFiltered.forEach((command, index) => {
+            const item = document.createElement('div');
+            item.className = 'command-item' + (index === this.cpActiveIndex ? ' active' : '');
+
+            const icon = document.createElement('div');
+            icon.className = 'command-item-icon';
+            icon.textContent = command.icon;
+
+            const body = document.createElement('div');
+            body.className = 'command-item-body';
+            const title = document.createElement('div');
+            title.className = 'command-item-title';
+            title.textContent = command.title;
+            const desc = document.createElement('div');
+            desc.className = 'command-item-desc';
+            desc.textContent = command.desc;
+            body.appendChild(title);
+            body.appendChild(desc);
+
+            item.appendChild(icon);
+            item.appendChild(body);
+
+            if (command.kbd) {
+                const kbd = document.createElement('span');
+                kbd.className = 'kbd';
+                kbd.textContent = command.kbd;
+                item.appendChild(kbd);
+            }
+
+            item.addEventListener('click', () => this.executeCommand(command));
+            item.addEventListener('mouseenter', () => {
+                this.cpActiveIndex = index;
+                this.updateCommandActiveState();
+            });
+
+            this.commandPaletteList.appendChild(item);
+        });
+    }
+
+    moveCommandSelection(delta) {
+        if (this.cpFiltered.length === 0) return;
+        this.cpActiveIndex = (this.cpActiveIndex + delta + this.cpFiltered.length) % this.cpFiltered.length;
+        this.updateCommandActiveState();
+    }
+
+    updateCommandActiveState() {
+        const items = this.commandPaletteList.querySelectorAll('.command-item');
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === this.cpActiveIndex);
+        });
+        const activeItem = items[this.cpActiveIndex];
+        if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
+    }
+
+    executeCommand(command) {
+        this.closeCommandPalette();
+        command.run();
+    }
+
+    // ============== 뷰포트 스위처 ==============
+    bindViewportSwitcher() {
+        document.querySelectorAll('.viewport-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.setViewport(btn.dataset.viewport));
+        });
+    }
+
+    setViewport(mode) {
+        if (mode === 'full') {
+            delete document.body.dataset.viewport;
+        } else {
+            document.body.dataset.viewport = mode;
+        }
+
+        document.querySelectorAll('.viewport-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.viewport === mode);
+        });
+    }
+
+    // ============== 원본 편집 (외부 에디터 연동) ==============
+    bindEditorDropdown() {
+        const dropdown = document.getElementById('openInEditorDropdown');
+        const openBtn = document.getElementById('openInEditorBtn');
+        if (!dropdown || !openBtn) return;
+
+        openBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+
+        dropdown.querySelectorAll('.gs-dropdown-item').forEach(item => {
+            item.addEventListener('click', () => {
+                dropdown.classList.remove('open');
+                const editor = item.dataset.editor;
+
+                if (editor === 'set-path') {
+                    this.showPathModal();
+                } else if (editor && editor !== 'monaco') {
+                    this.openInExternalEditor(editor);
+                }
+            });
+        });
+    }
+
+    closeEditorDropdown() {
+        const dropdown = document.getElementById('openInEditorDropdown');
+        if (dropdown) dropdown.classList.remove('open');
+    }
+
+    openInExternalEditor(editor) {
+        if (!editor || editor === 'monaco') editor = 'vscode';
+        this.preferredEditor = editor;
+        localStorage.setItem('preferredEditor', editor);
+
+        if (!this.localFilePath) {
+            this.showToast('먼저 로컬 파일 경로를 설정해주세요.', 'warning');
+            this.showPathModal();
+            return;
+        }
+
+        const path = this.localFilePath.replace(/\\/g, '/');
+        const urls = {
+            vscode: `vscode://file/${encodeURI(path)}`,
+            cursor: `cursor://file/${encodeURI(path)}`,
+            sublime: `subl://open?url=file://${encodeURI(path)}`,
+            webstorm: `webstorm://open?file=${encodeURIComponent(this.localFilePath)}`
+        };
+
+        const url = urls[editor];
+        if (!url) return;
+
+        const link = document.createElement('a');
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        this.showToast('외부 에디터 열기를 요청했습니다. 응답이 없다면 해당 에디터 설치 여부를 확인해주세요.', 'info');
+    }
+
+    // ============== 경로 설정 모달 ==============
+    bindPathModal() {
+        this.pathModal = document.getElementById('pathModal');
+        this.pathInput = document.getElementById('pathInput');
+        if (!this.pathModal) return;
+
+        const closeBtn = document.getElementById('pathModalClose');
+        const cancelBtn = document.getElementById('pathCancelBtn');
+        const saveBtn = document.getElementById('pathSaveBtn');
+
+        if (closeBtn) closeBtn.addEventListener('click', () => this.hidePathModal());
+        if (cancelBtn) cancelBtn.addEventListener('click', () => this.hidePathModal());
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.localFilePath = this.pathInput.value.trim();
+                localStorage.setItem('localFilePath', this.localFilePath);
+                this.hidePathModal();
+                this.showToast(this.localFilePath ? '파일 경로가 저장되었습니다.' : '파일 경로가 비워졌습니다.', 'success');
+            });
+        }
+
+        this.pathModal.addEventListener('click', (e) => {
+            if (e.target === this.pathModal) this.hidePathModal();
+        });
+    }
+
+    showPathModal() {
+        if (!this.pathModal) return;
+        this.pathInput.value = this.localFilePath || '';
+        this.pathModal.style.display = 'flex';
+        this.pathInput.focus();
+    }
+
+    hidePathModal() {
+        if (this.pathModal) this.pathModal.style.display = 'none';
+    }
+
+    // ============== 단축키 가이드 모달 ==============
+    bindShortcutsModal() {
+        this.shortcutsModal = document.getElementById('shortcutsModal');
+        if (!this.shortcutsModal) return;
+
+        const openBtn = document.getElementById('shortcutBtn');
+        const closeBtn = document.getElementById('shortcutsModalClose');
+
+        if (openBtn) openBtn.addEventListener('click', () => this.showShortcutsModal());
+        if (closeBtn) closeBtn.addEventListener('click', () => this.hideShortcutsModal());
+
+        this.shortcutsModal.addEventListener('click', (e) => {
+            if (e.target === this.shortcutsModal) this.hideShortcutsModal();
+        });
+    }
+
+    showShortcutsModal() {
+        if (this.shortcutsModal) this.shortcutsModal.style.display = 'flex';
+    }
+
+    hideShortcutsModal() {
+        if (this.shortcutsModal) this.shortcutsModal.style.display = 'none';
+    }
 }
+
+// ============== 시작 문서 템플릿 ==============
+const GS_BLANK_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>새 문서</title>
+<style>
+    body { font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; margin: 0; padding: 48px 24px; color: #1e293b; }
+    main { max-width: 720px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<main>
+    <h1>새 문서</h1>
+    <p>여기를 클릭해 텍스트를 편집하거나, 템플릿 라이브러리(🧩)에서 컴포넌트를 추가해보세요.</p>
+</main>
+</body>
+</html>`;
+
+const GS_SAMPLE_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>샘플 랜딩 페이지</title>
+<style>
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; color: #1e293b; line-height: 1.6; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid #e2e8f0; }
+    header nav a { margin-left: 20px; color: #475569; text-decoration: none; font-size: 14px; }
+    .hero { text-align: center; padding: 90px 24px; background: linear-gradient(135deg, #eef2ff, #f5f3ff); }
+    .hero h1 { font-size: 42px; letter-spacing: -0.02em; margin-bottom: 14px; }
+    .hero p { color: #64748b; font-size: 18px; margin-bottom: 28px; }
+    .hero button { padding: 13px 30px; font-size: 15px; background: #6366f1; color: #fff; border: none; border-radius: 10px; cursor: pointer; }
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; padding: 70px 24px; }
+    .feature { padding: 26px; border: 1px solid #e2e8f0; border-radius: 14px; }
+    .feature h3 { margin-bottom: 8px; font-size: 17px; }
+    .feature p { color: #64748b; font-size: 14px; }
+    footer { text-align: center; padding: 34px; color: #94a3b8; font-size: 13px; border-top: 1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<header>
+    <strong>🚀 MyProduct</strong>
+    <nav><a href="#">기능</a><a href="#">가격</a><a href="#">문의</a></nav>
+</header>
+<section class="hero">
+    <h1>더 빠르게 만들고, 더 쉽게 편집하세요</h1>
+    <p>HTML Live Editor Pro 샘플 페이지입니다. 요소를 클릭해 편집해보세요.</p>
+    <button>지금 시작하기</button>
+</section>
+<section class="features">
+    <div class="feature"><h3>⚡ 실시간 편집</h3><p>클릭 한 번으로 텍스트와 요소를 바로 수정합니다.</p></div>
+    <div class="feature"><h3>🧩 템플릿</h3><p>준비된 컴포넌트와 섹션을 페이지에 끼워 넣습니다.</p></div>
+    <div class="feature"><h3>📥 즉시 저장</h3><p>편집이 끝나면 깨끗한 HTML로 다운로드합니다.</p></div>
+</section>
+<footer>© 2026 MyProduct. All rights reserved.</footer>
+</body>
+</html>`;
+
+// ============== 템플릿 라이브러리 데이터 ==============
+const GS_TEMPLATES = [
+    // 컴포넌트
+    {
+        category: 'component', name: '버튼 세트', desc: '기본 · 보조 버튼 한 쌍',
+        html: `<div style="display:flex; gap:10px; padding:8px 0;"><button style="padding:10px 22px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer;">기본 버튼</button><button style="padding:10px 22px; background:transparent; color:#6366f1; border:1px solid #6366f1; border-radius:8px; font-size:14px; cursor:pointer;">보조 버튼</button></div>`
+    },
+    {
+        category: 'component', name: '카드', desc: '제목·본문·액션이 있는 기본 카드',
+        html: `<div style="max-width:340px; padding:22px; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 1px 3px rgba(15,23,42,0.08); background:#fff;"><h3 style="margin:0 0 8px; font-size:17px; color:#1e293b;">카드 제목</h3><p style="margin:0 0 16px; font-size:14px; color:#64748b; line-height:1.6;">카드 내용을 여기에 작성하세요. 클릭해서 바로 편집할 수 있습니다.</p><button style="padding:8px 18px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer;">자세히 보기</button></div>`
+    },
+    {
+        category: 'component', name: '알림 배너', desc: '정보 전달용 인라인 알림',
+        html: `<div style="display:flex; gap:10px; align-items:flex-start; padding:14px 16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1d4ed8; font-size:14px;"><span>ℹ️</span><div><strong style="display:block; margin-bottom:2px;">알림 제목</strong><span style="color:#3b82f6;">전달할 안내 메시지를 여기에 작성하세요.</span></div></div>`
+    },
+    {
+        category: 'component', name: '배지 세트', desc: '상태 표시용 배지 4종',
+        html: `<div style="display:flex; gap:8px; flex-wrap:wrap; padding:6px 0;"><span style="padding:4px 12px; background:#eef2ff; color:#6366f1; border-radius:999px; font-size:12px; font-weight:600;">신규</span><span style="padding:4px 12px; background:#f0fdf4; color:#16a34a; border-radius:999px; font-size:12px; font-weight:600;">완료</span><span style="padding:4px 12px; background:#fffbeb; color:#d97706; border-radius:999px; font-size:12px; font-weight:600;">진행 중</span><span style="padding:4px 12px; background:#fef2f2; color:#dc2626; border-radius:999px; font-size:12px; font-weight:600;">긴급</span></div>`
+    },
+    {
+        category: 'component', name: '입력 필드', desc: '레이블이 있는 텍스트 입력',
+        html: `<div style="max-width:340px; padding:6px 0;"><label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#334155;">이름</label><input type="text" placeholder="이름을 입력하세요" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;"></div>`
+    },
+    // 섹션
+    {
+        category: 'section', name: '히어로 섹션', desc: '큰 제목 + 설명 + CTA 버튼',
+        html: `<section style="text-align:center; padding:80px 24px; background:linear-gradient(135deg, #eef2ff, #f5f3ff);"><h1 style="margin:0 0 14px; font-size:40px; letter-spacing:-0.02em; color:#1e293b;">멋진 제품을 소개합니다</h1><p style="margin:0 0 26px; font-size:17px; color:#64748b;">한 문장으로 제품의 핵심 가치를 전달하세요.</p><button style="padding:13px 30px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer;">지금 시작하기</button></section>`
+    },
+    {
+        category: 'section', name: '특징 3열', desc: '아이콘·제목·설명 3열 그리드',
+        html: `<section style="display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; max-width:960px; margin:0 auto; padding:56px 24px;"><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">⚡ 빠른 속도</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🔒 안전한 보안</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🎨 쉬운 사용</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div></section>`
+    },
+    {
+        category: 'section', name: 'CTA 배너', desc: '행동 유도 풀와이드 배너',
+        html: `<section style="text-align:center; padding:52px 24px; background:#6366f1; border-radius:16px; margin:24px;"><h2 style="margin:0 0 10px; font-size:26px; color:#fff;">지금 바로 시작해보세요</h2><p style="margin:0 0 22px; font-size:15px; color:#e0e7ff;">가입은 무료이며 1분이면 충분합니다.</p><button style="padding:12px 28px; background:#fff; color:#6366f1; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">무료로 시작하기</button></section>`
+    },
+    {
+        category: 'section', name: '푸터', desc: '저작권·링크가 있는 페이지 하단',
+        html: `<footer style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:30px 32px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:13px;"><span>© 2026 회사명. All rights reserved.</span><nav style="display:flex; gap:18px;"><a href="#" style="color:#64748b; text-decoration:none;">이용약관</a><a href="#" style="color:#64748b; text-decoration:none;">개인정보처리방침</a><a href="#" style="color:#64748b; text-decoration:none;">문의</a></nav></footer>`
+    },
+    // 페이지
+    {
+        category: 'page', name: '미니 랜딩 페이지', desc: '히어로 + 특징 + 푸터 구성',
+        html: `<section style="text-align:center; padding:80px 24px; background:linear-gradient(135deg, #eef2ff, #f5f3ff);"><h1 style="margin:0 0 14px; font-size:40px; letter-spacing:-0.02em; color:#1e293b;">제품 이름</h1><p style="margin:0 0 26px; font-size:17px; color:#64748b;">제품의 핵심 가치를 한 문장으로 전달하세요.</p><button style="padding:13px 30px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer;">시작하기</button></section><section style="display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; max-width:960px; margin:0 auto; padding:56px 24px;"><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">⚡ 특징 1</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🧩 특징 2</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">📥 특징 3</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div></section><footer style="text-align:center; padding:30px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:13px;">© 2026 회사명. All rights reserved.</footer>`
+    },
+    {
+        category: 'page', name: '심플 문서', desc: '제목·부제·본문 구조의 문서 레이아웃',
+        html: `<article style="max-width:720px; margin:0 auto; padding:48px 24px;"><h1 style="margin:0 0 6px; font-size:32px; color:#1e293b;">문서 제목</h1><p style="margin:0 0 28px; font-size:14px; color:#94a3b8;">작성일: 2026-01-01 · 작성자: 홍길동</p><h2 style="margin:0 0 10px; font-size:22px; color:#1e293b;">첫 번째 소제목</h2><p style="margin:0 0 22px; font-size:15px; color:#475569; line-height:1.7;">본문 내용을 작성하세요. 요소를 클릭하면 바로 편집할 수 있습니다.</p><h2 style="margin:0 0 10px; font-size:22px; color:#1e293b;">두 번째 소제목</h2><p style="margin:0; font-size:15px; color:#475569; line-height:1.7;">이어지는 본문 내용을 작성하세요.</p></article>`
+    }
+];
 
 // 에디터 초기화
 document.addEventListener('DOMContentLoaded', () => {
