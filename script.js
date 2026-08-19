@@ -41,7 +41,6 @@ class HTMLLiveEditor {
         this.iconCache = new Map();
         this.iconConfig = { size: 24, stroke: 2, color: '#0f172a' };
         this.activeAssetTab = 'icon';
-        this.activeTemplateCategory = 'component';
         this.commandPaletteVisible = false;
         this.autosaveTimer = null;
         // 문서 내 스크립트 실행 여부 (기본 차단 — 로드 시 사용자 동의로만 허용)
@@ -160,121 +159,270 @@ class HTMLLiveEditor {
         });
     }
 
-    // ============== 스타일 패널 이벤트 바인딩 ==============
+    // ============== 스타일 인스펙터 이벤트 바인딩 ==============
     bindStylePanelEvents() {
-        // 배경색
-        const bgColor = document.getElementById('bgColor');
-        const bgColorText = document.getElementById('bgColorText');
-        const bgColorClear = document.getElementById('bgColorClear');
+        const panel = this.stylePanel;
+        if (!panel) return;
 
-        bgColor.addEventListener('input', (e) => {
-            bgColorText.value = e.target.value;
-            this.applyStyle('backgroundColor', e.target.value);
+        this.copiedStyle = '';
+
+        // 탭 전환
+        panel.querySelectorAll('.sp-tab').forEach(tab => {
+            tab.addEventListener('click', () => this.switchStyleTab(tab.dataset.pane));
         });
 
-        bgColorText.addEventListener('change', (e) => {
-            bgColor.value = e.target.value;
-            this.applyStyle('backgroundColor', e.target.value);
+        // data-css 를 가진 모든 입력을 일괄 바인딩 (선언적 처리)
+        panel.querySelectorAll('input[data-css], select[data-css], textarea[data-css]').forEach(control => {
+            const liveEvent = (control.type === 'range' || control.type === 'color') ? 'input' : 'change';
+            control.addEventListener(liveEvent, () => this.applyControlValue(control));
+            if (control.type === 'range') {
+                control.addEventListener('change', () => this.applyControlValue(control));
+            }
         });
 
-        bgColorClear.addEventListener('click', () => {
+        // 토글 버튼 (정렬, B/I/U/S 등)
+        panel.querySelectorAll('button[data-css][data-value]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleStyleValue(btn));
+        });
+
+        // 개별 속성 제거 버튼
+        panel.querySelectorAll('[data-clear]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.applyStyle(btn.dataset.clear, '');
+                this.loadCurrentStyles();
+            });
+        });
+
+        // ---------- 구조 탭 ----------
+        const wire = (id, handler) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', handler);
+        };
+
+        wire('spSelParent', () => this.navigateToParent());
+        wire('spSelChild', () => this.navigateToFirstChild());
+        wire('spSelPrev', () => this.navigateToPrevSibling());
+        wire('spSelNext', () => this.navigateToNextSibling());
+
+        wire('spMoveOut', () => this.moveOutOfParent());
+        wire('spNestPrev', () => this.nestIntoPreviousSibling());
+        wire('spWrapDiv', () => this.wrapWithDiv());
+        wire('spUnwrap', () => this.unwrapElement());
+
+        wire('spMoveUp', () => this.selectedElement && this.moveElement(this.selectedElement, 'up'));
+        wire('spMoveDown', () => this.selectedElement && this.moveElement(this.selectedElement, 'down'));
+        wire('spDuplicate', () => this.duplicateElement());
+        wire('spDelete', () => this.deleteElement());
+
+        wire('spTagApply', () => {
+            const select = document.getElementById('spTagSelect');
+            if (select && select.value) this.changeElementTag(select.value);
+        });
+        wire('spIdentityApply', () => this.applyElementIdentity());
+        document.getElementById('spIdInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.applyElementIdentity();
+        });
+        document.getElementById('spClassInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.applyElementIdentity();
+        });
+
+        wire('spCopyStyle', () => this.copyElementStyle());
+        wire('spPasteStyle', () => this.pasteElementStyle());
+        wire('spResetStyle', () => this.clearInlineStyles());
+        wire('spStyleTextApply', () => {
+            const box = document.getElementById('spStyleText');
+            if (box) this.applyCssText(box.value);
+        });
+
+        // ---------- 텍스트 탭 ----------
+        wire('spFontCustomApply', () => {
+            const input = document.getElementById('spFontCustom');
+            if (input && input.value.trim()) {
+                this.applyStyle('fontFamily', input.value.trim());
+                this.loadCurrentStyles();
+            }
+        });
+
+        // ---------- 박스 탭 ----------
+        const applyBorder = () => {
+            const width = document.getElementById('borderWidth').value || 0;
+            const style = document.getElementById('borderStyle').value;
+            const color = document.getElementById('borderColor').value;
+            this.applyStyle('border', style === 'none' ? 'none' : `${width}px ${style} ${color}`);
+        };
+        wire('applyBorder', applyBorder);
+        wire('clearBorder', () => {
+            this.applyStyle('border', '');
+            this.applyStyle('borderWidth', '');
+            this.applyStyle('borderStyle', '');
+        });
+
+        panel.querySelectorAll('[data-border-side]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const width = document.getElementById('borderWidth').value || 0;
+                const style = document.getElementById('borderStyle').value;
+                const color = document.getElementById('borderColor').value;
+                this.applyStyle('border', 'none');
+                this.applyStyle(btn.dataset.borderSide, style === 'none' ? 'none' : `${width}px ${style} ${color}`);
+            });
+        });
+
+        // ---------- 배경 탭 ----------
+        wire('bgColorClear', () => {
             this.applyStyle('backgroundColor', '');
             this.applyStyle('background', '');
         });
 
-        // 그라데이션
-        document.getElementById('applyGradient').addEventListener('click', () => {
+        wire('applyGradient', () => {
             const start = document.getElementById('gradientStart').value;
             const end = document.getElementById('gradientEnd').value;
             const direction = document.getElementById('gradientDirection').value;
             this.applyStyle('background', `linear-gradient(${direction}, ${start}, ${end})`);
         });
+        wire('clearGradient', () => this.applyStyle('background', ''));
 
-        document.getElementById('clearGradient').addEventListener('click', () => {
-            this.applyStyle('background', '');
+        wire('spBgImageApply', () => {
+            const url = document.getElementById('spBgImage').value.trim();
+            this.applyStyle('backgroundImage', url ? `url("${url}")` : '');
         });
 
-        // 텍스트 색상
-        const textColor = document.getElementById('textColor');
-        const textColorText = document.getElementById('textColorText');
-
-        textColor.addEventListener('input', (e) => {
-            textColorText.value = e.target.value;
-            this.applyStyle('color', e.target.value);
-        });
-
-        textColorText.addEventListener('change', (e) => {
-            textColor.value = e.target.value;
-            this.applyStyle('color', e.target.value);
-        });
-
-        // 보더
-        document.getElementById('applyBorder').addEventListener('click', () => {
-            const width = document.getElementById('borderWidth').value;
-            const style = document.getElementById('borderStyle').value;
-            const color = document.getElementById('borderColor').value;
-            this.applyStyle('border', `${width}px ${style} ${color}`);
-        });
-
-        document.getElementById('clearBorder').addEventListener('click', () => {
-            this.applyStyle('border', 'none');
-        });
-
-        // 보더 래디우스
-        const borderRadius = document.getElementById('borderRadius');
-        const borderRadiusValue = document.getElementById('borderRadiusValue');
-
-        borderRadius.addEventListener('input', (e) => {
-            borderRadiusValue.textContent = `${e.target.value}px`;
-            this.applyStyle('borderRadius', `${e.target.value}px`);
-        });
-
-        // 여백 (마진)
-        ['Top', 'Bottom', 'Left', 'Right'].forEach(dir => {
-            document.getElementById(`margin${dir}`).addEventListener('change', (e) => {
-                this.applyStyle(`margin${dir}`, `${e.target.value}px`);
+        const shadowAlpha = document.getElementById('spShadowAlpha');
+        if (shadowAlpha) {
+            shadowAlpha.addEventListener('input', () => {
+                document.getElementById('spShadowAlphaValue').textContent = `${shadowAlpha.value}%`;
             });
-        });
-
-        // 패딩
-        ['Top', 'Bottom', 'Left', 'Right'].forEach(dir => {
-            document.getElementById(`padding${dir}`).addEventListener('change', (e) => {
-                this.applyStyle(`padding${dir}`, `${e.target.value}px`);
-            });
-        });
-
-        // 그림자
-        document.getElementById('applyShadow').addEventListener('click', () => {
-            const x = document.getElementById('shadowX').value;
-            const y = document.getElementById('shadowY').value;
-            const blur = document.getElementById('shadowBlur').value;
+        }
+        wire('applyShadow', () => {
+            const x = document.getElementById('shadowX').value || 0;
+            const y = document.getElementById('shadowY').value || 0;
+            const blur = document.getElementById('shadowBlur').value || 0;
+            const spread = document.getElementById('spShadowSpread').value || 0;
             const color = document.getElementById('shadowColor').value;
-            this.applyStyle('boxShadow', `${x}px ${y}px ${blur}px ${this.hexToRgba(color, 0.3)}`);
+            const alpha = (parseInt(document.getElementById('spShadowAlpha').value, 10) || 0) / 100;
+            const inset = document.getElementById('spShadowInset').checked ? 'inset ' : '';
+            this.applyStyle('boxShadow', `${inset}${x}px ${y}px ${blur}px ${spread}px ${this.hexToRgba(color, alpha)}`);
+        });
+        wire('clearShadow', () => this.applyStyle('boxShadow', 'none'));
+
+        // 빠른 색상 팔레트 (적용 대상 전환 가능)
+        this.paletteTarget = 'backgroundColor';
+        panel.querySelectorAll('[data-palette-target]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                panel.querySelectorAll('[data-palette-target]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.paletteTarget = btn.dataset.paletteTarget;
+            });
         });
 
-        document.getElementById('clearShadow').addEventListener('click', () => {
-            this.applyStyle('boxShadow', 'none');
-        });
-
-        // 폰트 크기
-        const fontSize = document.getElementById('fontSize');
-        const fontSizeValue = document.getElementById('fontSizeValue');
-
-        fontSize.addEventListener('input', (e) => {
-            fontSizeValue.textContent = `${e.target.value}px`;
-            this.applyStyle('fontSize', `${e.target.value}px`);
-        });
-
-        // 컬러 팔레트
-        document.getElementById('colorPalette').addEventListener('click', (e) => {
-            if (e.target.classList.contains('palette-color')) {
+        const palette = document.getElementById('colorPalette');
+        if (palette) {
+            palette.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('palette-color')) return;
                 const color = e.target.dataset.color;
-                this.applyStyle('backgroundColor', color);
-                document.getElementById('bgColor').value = color;
-                document.getElementById('bgColorText').value = color;
-            }
-        });
+                if (this.paletteTarget === 'borderColor') {
+                    this.applyStyle('borderColor', color);
+                    this.applyStyle('borderStyle', 'solid');
+                    const targets = this.getBatchTargets();
+                    targets.forEach(el => {
+                        if (!parseFloat(el.style.borderWidth)) el.style.borderWidth = '1px';
+                    });
+                } else {
+                    this.applyStyle(this.paletteTarget, color);
+                }
+                this.loadCurrentStyles();
+            });
+        }
 
+        // ---------- 배치 탭 ----------
+        wire('spFlexRowCenter', () => {
+            this.applyStyle('display', 'flex');
+            this.applyStyle('flexDirection', 'row');
+            this.applyStyle('justifyContent', 'center');
+            this.applyStyle('alignItems', 'center');
+            this.loadCurrentStyles();
+        });
+        wire('spCenterBlock', () => {
+            this.applyStyle('marginLeft', 'auto');
+            this.applyStyle('marginRight', 'auto');
+            this.loadCurrentStyles();
+        });
+    }
+
+    switchStyleTab(name) {
+        if (!this.stylePanel || !name) return;
+        this.stylePanel.querySelectorAll('.sp-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.pane === name);
+        });
+        this.stylePanel.querySelectorAll('.sp-pane').forEach(pane => {
+            pane.classList.toggle('active', pane.dataset.pane === name);
+        });
+    }
+
+    // 컨트롤 하나의 값을 CSS 값으로 변환해 적용
+    applyControlValue(control) {
+        const prop = control.dataset.css;
+        const raw = typeof control.value === 'string' ? control.value.trim() : control.value;
+        let value = raw;
+
+        if (raw === '') {
+            value = '';
+        } else if (control.dataset.percent) {
+            value = String((parseFloat(raw) || 0) / 100);
+        } else if (control.dataset.unit && /^-?\d*\.?\d+$/.test(raw)) {
+            value = raw + control.dataset.unit;
+        }
+
+        this.applyStyle(prop, value);
+        this.syncPairedControl(control, raw);
+
+        // 여백/패딩 4방향 동일 옵션
+        if (control.dataset.group && this.isSpacingLinked(control.dataset.group)) {
+            ['Top', 'Bottom', 'Left', 'Right'].forEach(dir => {
+                const sideProp = control.dataset.group + dir;
+                if (sideProp === prop) return;
+                this.applyStyle(sideProp, value);
+                const sibling = this.stylePanel.querySelector(`[data-css="${sideProp}"]`);
+                if (sibling) sibling.value = raw;
+            });
+        }
+    }
+
+    isSpacingLinked(group) {
+        const box = document.getElementById(group === 'margin' ? 'spMarginLink' : 'spPaddingLink');
+        return !!(box && box.checked);
+    }
+
+    syncPairedControl(control, raw) {
+        const partnerId = control.dataset.sync;
+        if (!partnerId) return;
+        const partner = document.getElementById(partnerId);
+        if (!partner) return;
+
+        if (partner.tagName === 'SPAN') {
+            partner.textContent = control.dataset.percent ? `${raw}%` : `${raw}${control.dataset.unit || ''}`;
+        } else if (partner.type === 'color') {
+            // 빈 문자열/rgb() 를 넣으면 브라우저가 검정으로 되돌리므로 유효한 hex 일 때만 반영
+            if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw)) partner.value = raw;
+        } else {
+            partner.value = raw;
+        }
+    }
+
+    isTransparentColor(value) {
+        const v = (value || '').replace(/\s/g, '').toLowerCase();
+        return !v || v === 'transparent' || v === 'rgba(0,0,0,0)';
+    }
+
+    // 계산값 힌트를 정수 px 로 다듬어 표시 (162.172px → 162px)
+    formatComputedHint(value) {
+        return value.replace(/(-?[\d.]+)px/g, (match, num) => `${Math.round(parseFloat(num))}px`);
+    }
+
+    toggleStyleValue(btn) {
+        const prop = btn.dataset.css;
+        const isActive = btn.classList.contains('active');
+        this.applyStyle(prop, isActive ? '' : btn.dataset.value);
+        this.loadCurrentStyles();
     }
 
     // ============== AI 모달 이벤트 바인딩 ==============
@@ -754,52 +902,151 @@ class HTMLLiveEditor {
         this.stylePanelOpen = false;
     }
 
+    // 패널 상단의 "지금 편집 중인 요소" 표시
+    updateStyleTargetInfo(reference) {
+        const tagEl = document.getElementById('spTargetTag');
+        const pathEl = document.getElementById('spTargetPath');
+        const countEl = document.getElementById('spTargetCount');
+        if (!tagEl || !pathEl || !countEl) return;
+
+        tagEl.textContent = reference.tagName.toLowerCase();
+
+        const parts = [];
+        if (reference.id) parts.push(`#${reference.id}`);
+        const classes = this.getContentClasses(reference);
+        if (classes.length > 0) parts.push('.' + classes.slice(0, 3).join('.'));
+        const parent = reference.parentElement;
+        if (parent && parent.tagName !== 'BODY') {
+            parts.push(`↳ ${parent.tagName.toLowerCase()} 안`);
+        }
+        pathEl.textContent = parts.join(' ');
+
+        if (this.selectedElements.length > 1) {
+            countEl.textContent = `${this.selectedElements.length}개 일괄 편집`;
+            countEl.style.display = 'inline-block';
+        } else {
+            countEl.style.display = 'none';
+        }
+    }
+
     loadCurrentStyles() {
-        // 다중 선택만 있는 경우 첫 요소 기준으로 현재 값 표시
+        // 다중 선택만 있는 경우 첫 요소를 기준으로 현재 값을 표시
         const reference = this.selectedElement || this.selectedElements[0];
-        if (!reference) return;
+        if (!reference || !this.stylePanel) return;
+
+        this.updateStyleTargetInfo(reference);
 
         const view = reference.ownerDocument.defaultView || window;
         const computed = view.getComputedStyle(reference);
-        const style = reference.style;
+        const inline = reference.style;
 
-        // 배경색
-        const bgColor = style.backgroundColor || computed.backgroundColor;
-        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-            const hex = this.rgbToHex(bgColor);
-            document.getElementById('bgColor').value = hex;
-            document.getElementById('bgColorText').value = hex;
+        this.stylePanel.querySelectorAll('input[data-css], select[data-css], textarea[data-css]').forEach(control => {
+            const prop = control.dataset.css;
+            const inlineValue = inline[prop] || '';
+            const computedValue = computed[prop] || '';
+            const effective = inlineValue || computedValue;
+
+            if (control.type === 'color') {
+                control.value = this.rgbToHex(effective || '#000000');
+            } else if (control.classList.contains('color-text')) {
+                // 색상 입력칸은 계산된 색을 hex 로 보여준다 (빈 값이면 투명)
+                control.value = this.isTransparentColor(effective) ? '' : this.rgbToHex(effective);
+            } else if (control.dataset.percent) {
+                const ratio = parseFloat(effective);
+                control.value = Math.round((isNaN(ratio) ? 1 : ratio) * 100);
+            } else if (control.dataset.ratio) {
+                control.value = this.readLineHeight(inlineValue, computedValue, computed);
+            } else if (control.dataset.unit) {
+                const num = parseFloat(effective);
+                control.value = isNaN(num) ? '' : Math.round(num * 100) / 100;
+            } else if (control.tagName === 'SELECT') {
+                control.value = this.matchSelectValue(control, prop, inlineValue, computedValue);
+            } else {
+                // 자유 입력(width, top 등): 인라인 값만 채우고 계산값은 placeholder 로 힌트
+                control.value = inlineValue;
+                if (computedValue && computedValue.length < 24) {
+                    control.placeholder = this.formatComputedHint(computedValue);
+                }
+            }
+
+            this.syncPairedControl(control, control.value);
+        });
+
+        // 토글 버튼 상태
+        this.stylePanel.querySelectorAll('button[data-css][data-value]').forEach(btn => {
+            const prop = btn.dataset.css;
+            const current = (inline[prop] || computed[prop] || '').toString();
+            btn.classList.toggle('active', this.styleValueMatches(current, btn.dataset.value, prop));
+        });
+
+        // 구조 탭 입력값
+        const classInput = document.getElementById('spClassInput');
+        const idInput = document.getElementById('spIdInput');
+        const styleText = document.getElementById('spStyleText');
+        const tagSelect = document.getElementById('spTagSelect');
+        if (classInput) classInput.value = this.getContentClasses(reference).join(' ');
+        if (idInput) idInput.value = reference.id || '';
+        if (styleText) styleText.value = reference.getAttribute('style') || '';
+        if (tagSelect) tagSelect.value = '';
+    }
+
+    // line-height 는 계산값이 px 로 나오므로 배수로 환산해 보여줌
+    readLineHeight(inlineValue, computedValue, computed) {
+        if (inlineValue && !inlineValue.endsWith('px')) return parseFloat(inlineValue) || '';
+        const lh = parseFloat(inlineValue || computedValue);
+        const fs = parseFloat(computed.fontSize);
+        if (!lh || !fs) return '';
+        return Math.round((lh / fs) * 100) / 100;
+    }
+
+    matchSelectValue(control, prop, inlineValue, computedValue) {
+        const options = Array.from(control.options).map(o => o.value);
+        const candidates = [inlineValue, computedValue];
+
+        for (const raw of candidates) {
+            if (!raw) continue;
+            if (options.includes(raw)) return raw;
+
+            if (prop === 'fontFamily') {
+                const first = this.normalizeFontName(raw);
+                const hit = options.find(o => o && this.normalizeFontName(o) === first);
+                if (hit) return hit;
+            }
+            if (prop === 'fontWeight') {
+                const normalized = this.normalizeFontWeight(raw);
+                if (options.includes(normalized)) return normalized;
+            }
         }
+        return '';
+    }
 
-        // 텍스트 색상
-        const textColor = style.color || computed.color;
-        if (textColor) {
-            const hex = this.rgbToHex(textColor);
-            document.getElementById('textColor').value = hex;
-            document.getElementById('textColorText').value = hex;
+    normalizeFontName(stack) {
+        return (stack || '').split(',')[0].trim().replace(/^["']|["']$/g, '').toLowerCase();
+    }
+
+    normalizeFontWeight(value) {
+        const v = (value || '').toString().toLowerCase();
+        if (v === 'bold') return '700';
+        if (v === 'normal') return '400';
+        return v;
+    }
+
+    styleValueMatches(current, target, prop) {
+        let cur = (current || '').toLowerCase();
+        const want = (target || '').toLowerCase();
+        if (!cur) return false;
+
+        if (prop === 'textDecoration' || prop === 'textDecorationLine') {
+            return cur.includes(want);
         }
-
-        // 보더 래디우스
-        const borderRadius = parseInt(style.borderRadius || computed.borderRadius) || 0;
-        document.getElementById('borderRadius').value = borderRadius;
-        document.getElementById('borderRadiusValue').textContent = `${borderRadius}px`;
-
-        // 폰트 크기
-        const fontSize = parseInt(style.fontSize || computed.fontSize) || 16;
-        document.getElementById('fontSize').value = fontSize;
-        document.getElementById('fontSizeValue').textContent = `${fontSize}px`;
-
-        // 여백
-        document.getElementById('marginTop').value = parseInt(style.marginTop || computed.marginTop) || 0;
-        document.getElementById('marginBottom').value = parseInt(style.marginBottom || computed.marginBottom) || 0;
-        document.getElementById('marginLeft').value = parseInt(style.marginLeft || computed.marginLeft) || 0;
-        document.getElementById('marginRight').value = parseInt(style.marginRight || computed.marginRight) || 0;
-
-        // 패딩
-        document.getElementById('paddingTop').value = parseInt(style.paddingTop || computed.paddingTop) || 0;
-        document.getElementById('paddingBottom').value = parseInt(style.paddingBottom || computed.paddingBottom) || 0;
-        document.getElementById('paddingLeft').value = parseInt(style.paddingLeft || computed.paddingLeft) || 0;
-        document.getElementById('paddingRight').value = parseInt(style.paddingRight || computed.paddingRight) || 0;
+        if (prop === 'textAlign') {
+            if (cur === 'start') cur = 'left';
+            if (cur === 'end') cur = 'right';
+        }
+        if (prop === 'fontWeight') {
+            return this.normalizeFontWeight(cur) === this.normalizeFontWeight(want);
+        }
+        return cur === want;
     }
 
     // 스타일·삭제·복제 등 일괄 작업 대상: 다중 선택이 있으면 전체, 없으면 단일 선택
@@ -2213,67 +2460,72 @@ ${html}
     }
 
     // ============== Wrap/Unwrap/Move-out ==============
+    // ============== 구조 편집 (감싸기 / 꺼내기 / 태그 변경) ==============
+    getPrimaryTarget() {
+        return this.selectedElement || this.selectedElements[0] || null;
+    }
+
+    // 선택 요소(또는 같은 부모의 다중 선택 전체)를 새 div 로 감싼다
     wrapWithDiv() {
-        if (!this.selectedElement) {
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) {
             this.showToast('먼저 요소를 선택해주세요.', 'warning');
             return;
         }
 
-        const element = this.selectedElement;
-        const doc = element.ownerDocument;
-        const parent = element.parentElement;
-
+        const parent = targets[0].parentElement;
         if (!parent) {
             this.showToast('부모 요소가 없습니다.', 'error');
             return;
         }
 
-        // 새 div 생성
+        // 다중 선택은 같은 부모일 때만 하나의 div 로 묶는다
+        const sameParent = targets.every(el => el.parentElement === parent);
+        const group = sameParent ? targets : [targets[0]];
+
+        // 문서 순서대로 정렬해야 감싼 뒤에도 순서가 유지됨
+        const ordered = Array.from(parent.children).filter(child => group.includes(child));
+
+        const doc = parent.ownerDocument;
         const wrapper = doc.createElement('div');
-        wrapper.style.cssText = 'padding: 10px; border: 1px dashed #ccc;';
+        parent.insertBefore(wrapper, ordered[0]);
+        ordered.forEach(el => wrapper.appendChild(el));
 
-        // 요소를 div로 감싸기
-        parent.insertBefore(wrapper, element);
-        wrapper.appendChild(element);
-
-        this.setupElementEventListeners(wrapper);
+        this.clearMultiSelection();
         this.selectElement(wrapper);
         this.saveToHistory('div로 감싸기', true);
-        this.showToast('요소를 div로 감쌌습니다.', 'success');
+        this.showToast(ordered.length > 1 ? `${ordered.length}개 요소를 div로 묶었습니다.` : '요소를 div로 감쌌습니다.', 'success');
     }
 
+    // 껍데기 요소만 없애고 내부 내용은 부모에 그대로 남긴다
     unwrapElement() {
-        if (!this.selectedElement) {
+        const element = this.getPrimaryTarget();
+        if (!element) {
             this.showToast('먼저 요소를 선택해주세요.', 'warning');
             return;
         }
 
-        const element = this.selectedElement;
         const parent = element.parentElement;
-
-        if (!parent || parent.tagName === 'BODY') {
+        if (!parent || element.tagName === 'BODY') {
             this.showToast('감싸기를 해제할 수 없습니다.', 'error');
             return;
         }
 
-        // 요소의 모든 자식들을 부모 앞으로 이동
-        const children = Array.from(element.children);
-        if (children.length === 0) {
-            this.showToast('자식 요소가 없습니다.', 'warning');
+        // 텍스트 노드까지 포함해 모든 자식을 옮긴다 (요소만 옮기면 글자가 사라짐)
+        const movedChildren = Array.from(element.children);
+        if (element.childNodes.length === 0) {
+            this.showToast('내용이 없어 해제할 것이 없습니다.', 'warning');
             return;
         }
 
-        children.forEach(child => {
-            parent.insertBefore(child, element);
-            this.setupElementEventListeners(child);
-        });
-
-        // 원래 요소 삭제
+        while (element.firstChild) {
+            parent.insertBefore(element.firstChild, element);
+        }
         element.remove();
 
-        // 첫 번째 자식 선택
-        if (children.length > 0) {
-            this.selectElement(children[0]);
+        this.clearMultiSelection();
+        if (movedChildren.length > 0) {
+            this.selectElement(movedChildren[0]);
         } else {
             this.clearSelection();
         }
@@ -2282,27 +2534,195 @@ ${html}
         this.showToast('감싸기가 해제되었습니다.', 'success');
     }
 
+    // div 안에 갇힌 요소를 한 단계 위로 꺼낸다
     moveOutOfParent() {
-        if (!this.selectedElement) {
+        const element = this.getPrimaryTarget();
+        if (!element) {
             this.showToast('먼저 요소를 선택해주세요.', 'warning');
             return;
         }
 
-        const element = this.selectedElement;
         const parent = element.parentElement;
         const grandparent = parent ? parent.parentElement : null;
 
+        if (!parent || parent.tagName === 'BODY') {
+            this.showToast('이미 최상위에 있어 더 꺼낼 수 없습니다.', 'warning');
+            return;
+        }
         if (!grandparent || grandparent.tagName === 'HTML') {
             this.showToast('더 이상 밖으로 이동할 수 없습니다.', 'error');
             return;
         }
 
-        // 부모 다음 위치로 이동
         grandparent.insertBefore(element, parent.nextSibling);
+
+        // 껍데기만 남았다면 함께 정리
+        if (parent.children.length === 0 && !parent.textContent.trim()) {
+            parent.remove();
+        }
 
         this.selectElement(element);
         this.saveToHistory('부모 밖으로 이동', true);
-        this.showToast('요소를 부모 밖으로 이동했습니다.', 'success');
+        this.showToast(`<${parent.tagName.toLowerCase()}> 밖으로 꺼냈습니다.`, 'success');
+    }
+
+    // 바로 앞 형제 요소 안으로 집어넣는다 (부모 밖으로 빼기의 반대)
+    nestIntoPreviousSibling() {
+        const element = this.getPrimaryTarget();
+        if (!element) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const previous = element.previousElementSibling;
+        if (!previous) {
+            this.showToast('앞에 넣을 형제 요소가 없습니다.', 'warning');
+            return;
+        }
+
+        const voidTags = ['IMG', 'INPUT', 'BR', 'HR', 'TEXTAREA', 'SELECT'];
+        if (voidTags.includes(previous.tagName)) {
+            this.showToast(`<${previous.tagName.toLowerCase()}> 안에는 넣을 수 없습니다.`, 'error');
+            return;
+        }
+
+        previous.appendChild(element);
+        this.selectElement(element);
+        this.saveToHistory('앞 요소 안으로 이동', true);
+        this.showToast(`<${previous.tagName.toLowerCase()}> 안으로 넣었습니다.`, 'success');
+    }
+
+    // 자식 노드를 그대로 옮겨 태그만 교체 (편집 리스너가 붙은 노드를 유지)
+    changeElementTag(newTag) {
+        const element = this.getPrimaryTarget();
+        if (!element) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+        if (element.tagName.toLowerCase() === newTag) return;
+        if (['BODY', 'HTML', 'HEAD'].includes(element.tagName)) {
+            this.showToast('이 요소의 태그는 변경할 수 없습니다.', 'error');
+            return;
+        }
+
+        const doc = element.ownerDocument;
+        const created = doc.createElement(newTag);
+
+        Array.from(element.attributes).forEach(attr => {
+            try {
+                created.setAttribute(attr.name, attr.value);
+            } catch (e) {}
+        });
+        while (element.firstChild) {
+            created.appendChild(element.firstChild);
+        }
+
+        element.parentNode.replaceChild(created, element);
+
+        this.clearMultiSelection();
+        this.selectElement(created);
+        this.saveToHistory(`태그 변경: ${newTag}`, true);
+        this.showToast(`<${newTag}> 로 변경했습니다.`, 'success');
+    }
+
+    applyElementIdentity() {
+        const element = this.getPrimaryTarget();
+        if (!element) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const classInput = document.getElementById('spClassInput');
+        const idInput = document.getElementById('spIdInput');
+
+        if (idInput) {
+            const id = idInput.value.trim();
+            if (id) {
+                element.id = id;
+            } else {
+                element.removeAttribute('id');
+            }
+        }
+
+        if (classInput) {
+            // 에디터 내부 클래스(선택 표시 등)는 유지한 채 콘텐츠 클래스만 교체
+            const editorClasses = this.getEditorClasses().filter(cls => element.classList.contains(cls));
+            const next = classInput.value.trim().split(/\s+/).filter(Boolean);
+            element.className = '';
+            [...next, ...editorClasses].forEach(cls => element.classList.add(cls));
+            if (!element.getAttribute('class')) element.removeAttribute('class');
+        }
+
+        this.saveToHistory('클래스/ID 변경', true);
+        this.showToast('클래스/ID가 적용되었습니다.', 'success');
+    }
+
+    copyElementStyle() {
+        const element = this.getPrimaryTarget();
+        if (!element) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        this.copiedStyle = element.getAttribute('style') || '';
+        this.showToast(this.copiedStyle ? '스타일을 복사했습니다.' : '이 요소에는 인라인 스타일이 없습니다.', this.copiedStyle ? 'success' : 'warning');
+    }
+
+    pasteElementStyle() {
+        if (!this.copiedStyle) {
+            this.showToast('먼저 스타일을 복사해주세요.', 'warning');
+            return;
+        }
+        this.applyCssText(this.copiedStyle, '스타일 붙여넣기');
+    }
+
+    // "color: red; padding: 8px" 형태의 CSS 를 선택 요소 전체에 적용
+    applyCssText(cssText, actionName = 'CSS 직접 적용') {
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        const declarations = (cssText || '').split(';')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+                const index = part.indexOf(':');
+                if (index === -1) return null;
+                return [part.slice(0, index).trim(), part.slice(index + 1).trim()];
+            })
+            .filter(Boolean);
+
+        if (declarations.length === 0) {
+            this.showToast('적용할 CSS 가 없습니다.', 'warning');
+            return;
+        }
+
+        targets.forEach(el => {
+            declarations.forEach(([name, value]) => {
+                try {
+                    el.style.setProperty(name, value);
+                } catch (e) {}
+            });
+        });
+
+        this.saveToHistory(actionName, true);
+        this.loadCurrentStyles();
+        this.showToast(`${declarations.length}개 속성을 적용했습니다.`, 'success');
+    }
+
+    clearInlineStyles() {
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) {
+            this.showToast('먼저 요소를 선택해주세요.', 'warning');
+            return;
+        }
+
+        targets.forEach(el => el.removeAttribute('style'));
+        this.saveToHistory('인라인 스타일 초기화', true);
+        this.loadCurrentStyles();
+        this.showToast('인라인 스타일을 모두 지웠습니다.', 'success');
     }
 
     clearSelection() {
@@ -2419,6 +2839,9 @@ ${html}
             case 'move-out':
                 this.moveOutOfParent();
                 break;
+            case 'nest-prev':
+                this.nestIntoPreviousSibling();
+                break;
             case 'duplicate':
                 this.duplicateElement();
                 break;
@@ -2527,6 +2950,17 @@ ${html}
                 toolbarLeft = margin;
             } else if (toolbarLeft + toolbarWidth > screenWidth - margin) {
                 toolbarLeft = screenWidth - toolbarWidth - margin;
+            }
+
+            // 스타일 패널이 열려 있으면 그 위를 덮지 않도록 왼쪽으로 밀어냄
+            if (this.stylePanelOpen && this.stylePanel) {
+                const panelRect = this.stylePanel.getBoundingClientRect();
+                const overlapsPanel = toolbarLeft + toolbarWidth > panelRect.left - margin
+                    && toolbarTop < panelRect.bottom
+                    && toolbarTop + toolbarHeight > panelRect.top;
+                if (overlapsPanel) {
+                    toolbarLeft = Math.max(margin, panelRect.left - toolbarWidth - margin);
+                }
             }
 
             if (toolbarTop < margin) {
@@ -2940,7 +3374,6 @@ ${html}
     initGluestackModules() {
         this.bindStartOptions();
         this.bindSidePanels();
-        this.bindTemplateLibrary();
         this.bindCommandPalette();
         this.bindViewportSwitcher();
         this.bindEditorDropdown();
@@ -3006,26 +3439,19 @@ ${html}
 
     // ============== 사이드 패널 (템플릿 / 히스토리) ==============
     bindSidePanels() {
-        this.templatePanel = document.getElementById('templatePanel');
         this.historyPanel = document.getElementById('historyPanel');
         this.assetPanel = document.getElementById('assetPanel');
 
-        const templatesBtn = document.getElementById('templatesBtn');
         const historyBtn = document.getElementById('historyBtn');
-        const templateClose = document.getElementById('templatePanelClose');
         const historyClose = document.getElementById('historyPanelClose');
         const assetClose = document.getElementById('assetPanelClose');
 
-        if (templatesBtn) {
-            templatesBtn.addEventListener('click', () => this.toggleSidePanel(this.templatePanel));
-        }
         if (historyBtn) {
             historyBtn.addEventListener('click', () => {
                 this.toggleSidePanel(this.historyPanel);
                 this.renderHistoryPanel();
             });
         }
-        if (templateClose) templateClose.addEventListener('click', () => this.templatePanel.classList.remove('open'));
         if (historyClose) historyClose.addEventListener('click', () => this.historyPanel.classList.remove('open'));
         if (assetClose) assetClose.addEventListener('click', () => this.assetPanel.classList.remove('open'));
     }
@@ -3038,114 +3464,9 @@ ${html}
     }
 
     closeSidePanels() {
-        [this.templatePanel, this.historyPanel, this.assetPanel].forEach(panel => {
+        [this.historyPanel, this.assetPanel].forEach(panel => {
             if (panel) panel.classList.remove('open');
         });
-    }
-
-    // ============== 템플릿 라이브러리 ==============
-    bindTemplateLibrary() {
-        this.templateGrid = document.getElementById('templateGrid');
-        this.templateSearchInput = document.getElementById('templateSearch');
-
-        document.querySelectorAll('.template-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.template-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                this.activeTemplateCategory = tab.dataset.category;
-                this.renderTemplateGrid();
-            });
-        });
-
-        if (this.templateSearchInput) {
-            this.templateSearchInput.addEventListener('input', () => this.renderTemplateGrid());
-        }
-
-        this.renderTemplateGrid();
-    }
-
-    renderTemplateGrid() {
-        if (!this.templateGrid) return;
-
-        const query = (this.templateSearchInput ? this.templateSearchInput.value : '').trim().toLowerCase();
-        const items = GS_TEMPLATES.filter(t =>
-            t.category === this.activeTemplateCategory &&
-            (!query || t.name.toLowerCase().includes(query) || t.desc.toLowerCase().includes(query))
-        );
-
-        this.templateGrid.innerHTML = '';
-
-        if (items.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'command-palette-empty';
-            empty.textContent = '일치하는 템플릿이 없습니다.';
-            this.templateGrid.appendChild(empty);
-            return;
-        }
-
-        items.forEach(template => {
-            const card = document.createElement('div');
-            card.className = 'template-card';
-
-            const preview = document.createElement('div');
-            preview.className = 'template-card-preview';
-            preview.innerHTML = template.html;
-
-            const name = document.createElement('div');
-            name.className = 'template-card-name';
-            name.textContent = template.name;
-
-            const desc = document.createElement('div');
-            desc.className = 'template-card-desc';
-            desc.textContent = template.desc;
-
-            card.appendChild(preview);
-            card.appendChild(name);
-            card.appendChild(desc);
-            card.addEventListener('click', () => this.insertTemplate(template));
-
-            this.templateGrid.appendChild(card);
-        });
-    }
-
-    insertTemplate(template) {
-        const doc = this.getPreviewDoc();
-        if (!doc || !doc.body) {
-            this.showToast('먼저 문서를 열어주세요.', 'warning');
-            return;
-        }
-
-        const container = doc.createElement('div');
-        container.innerHTML = template.html;
-        const nodes = Array.from(container.children);
-
-        if (nodes.length === 0) return;
-
-        // 선택된 요소 뒤에 삽입, 없으면 body 끝에 추가
-        let anchor = (this.selectedElement && this.selectedElement.ownerDocument === doc && this.selectedElement.parentNode)
-            ? this.selectedElement
-            : null;
-
-        nodes.forEach(node => {
-            if (anchor) {
-                anchor.parentNode.insertBefore(node, anchor.nextSibling);
-                anchor = node;
-            } else {
-                doc.body.appendChild(node);
-            }
-        });
-
-        // 삽입된 콘텐츠를 편집 가능하게 처리
-        // (요소 선택은 body 이벤트 위임이 이미 커버하므로 텍스트 편집 바인딩만 수행)
-        nodes.forEach(node => {
-            this.processTextNodes(node);
-            node.querySelectorAll('.editable-text').forEach(span => this.bindEditableSpan(span));
-        });
-
-        this.selectElement(nodes[0]);
-        nodes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        this.saveToHistory(`템플릿 삽입: ${template.name}`, true);
-        this.showToast(`"${template.name}" 템플릿이 삽입되었습니다.`, 'success');
     }
 
     bindEditableSpan(span) {
@@ -3253,7 +3574,6 @@ ${html}
             { icon: '↷', title: '다시 실행', desc: '되돌린 편집을 다시 적용합니다', kbd: 'Ctrl+Y', run: () => this.redo() },
             { icon: '📥', title: 'HTML 다운로드', desc: '편집된 HTML을 파일로 저장합니다', kbd: '', run: () => this.downloadHTML() },
             { icon: isDark ? '☀️' : '🌙', title: isDark ? '라이트 테마로 전환' : '다크 테마로 전환', desc: '에디터 UI 테마를 전환합니다', kbd: 'Ctrl+Shift+L', run: () => this.toggleTheme() },
-            { icon: '🧩', title: '템플릿 라이브러리', desc: '컴포넌트·섹션·페이지 템플릿을 삽입합니다', kbd: '', run: () => this.toggleSidePanel(this.templatePanel) },
             { icon: '🕐', title: '히스토리 타임라인', desc: '편집 기록을 보고 특정 시점으로 이동합니다', kbd: '', run: () => { this.toggleSidePanel(this.historyPanel); this.renderHistoryPanel(); } },
             { icon: '⌨️', title: '단축키 가이드', desc: '사용 가능한 단축키를 확인합니다', kbd: '?', run: () => this.showShortcutsModal() },
             { icon: '🤖', title: 'AI 스타일 변환', desc: 'AI로 페이지 스타일을 변경합니다', kbd: '', run: () => this.showAIModal() },
@@ -3262,7 +3582,9 @@ ${html}
             { icon: '🗑️', title: '요소 삭제', desc: '선택한 요소를 삭제합니다', kbd: 'Del', run: () => this.deleteElement() },
             { icon: '📦', title: 'div로 감싸기', desc: '선택한 요소를 div로 감쌉니다', kbd: '', run: () => this.wrapWithDiv() },
             { icon: '📤', title: '감싸기 해제', desc: '선택한 요소의 자식을 밖으로 꺼냅니다', kbd: '', run: () => this.unwrapElement() },
-            { icon: '↗️', title: '부모 밖으로 이동', desc: '선택한 요소를 부모 밖으로 이동합니다', kbd: '', run: () => this.moveOutOfParent() },
+            { icon: '↗️', title: '부모 밖으로 이동', desc: 'div 안에 갇힌 요소를 한 단계 위로 꺼냅니다', kbd: '', run: () => this.moveOutOfParent() },
+            { icon: '↘️', title: '앞 요소 안으로 이동', desc: '바로 앞 형제 요소 안으로 집어넣습니다', kbd: '', run: () => this.nestIntoPreviousSibling() },
+            { icon: '♻️', title: '인라인 스타일 초기화', desc: '선택한 요소의 인라인 스타일을 모두 지웁니다', kbd: '', run: () => this.clearInlineStyles() },
             { icon: '🖥', title: '뷰포트: 전체 화면', desc: '미리보기를 전체 너비로 표시합니다', kbd: '', run: () => this.setViewport('full') },
             { icon: '💻', title: '뷰포트: 데스크톱 1440', desc: '1440px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('desktop') },
             { icon: '📱', title: '뷰포트: 태블릿 768', desc: '768px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('tablet') },
@@ -3536,7 +3858,7 @@ const GS_BLANK_HTML = `<!DOCTYPE html>
 <body>
 <main>
     <h1>새 문서</h1>
-    <p>여기를 클릭해 텍스트를 편집하거나, 템플릿 라이브러리(🧩)에서 컴포넌트를 추가해보세요.</p>
+    <p>여기를 클릭해 텍스트를 편집하고, 요소를 선택한 뒤 🎨 스타일 편집 패널에서 자유롭게 꾸며보세요.</p>
 </main>
 </body>
 </html>`;
@@ -3575,63 +3897,12 @@ const GS_SAMPLE_HTML = `<!DOCTYPE html>
 </section>
 <section class="features">
     <div class="feature"><h3>⚡ 실시간 편집</h3><p>클릭 한 번으로 텍스트와 요소를 바로 수정합니다.</p></div>
-    <div class="feature"><h3>🧩 템플릿</h3><p>준비된 컴포넌트와 섹션을 페이지에 끼워 넣습니다.</p></div>
+    <div class="feature"><h3>🎨 정밀 스타일</h3><p>폰트·색상·여백·레이아웃을 패널에서 바로 조정합니다.</p></div>
     <div class="feature"><h3>📥 즉시 저장</h3><p>편집이 끝나면 깨끗한 HTML로 다운로드합니다.</p></div>
 </section>
 <footer>© 2026 MyProduct. All rights reserved.</footer>
 </body>
 </html>`;
-
-// ============== 템플릿 라이브러리 데이터 ==============
-const GS_TEMPLATES = [
-    // 컴포넌트
-    {
-        category: 'component', name: '버튼 세트', desc: '기본 · 보조 버튼 한 쌍',
-        html: `<div style="display:flex; gap:10px; padding:8px 0;"><button style="padding:10px 22px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer;">기본 버튼</button><button style="padding:10px 22px; background:transparent; color:#6366f1; border:1px solid #6366f1; border-radius:8px; font-size:14px; cursor:pointer;">보조 버튼</button></div>`
-    },
-    {
-        category: 'component', name: '카드', desc: '제목·본문·액션이 있는 기본 카드',
-        html: `<div style="max-width:340px; padding:22px; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 1px 3px rgba(15,23,42,0.08); background:#fff;"><h3 style="margin:0 0 8px; font-size:17px; color:#1e293b;">카드 제목</h3><p style="margin:0 0 16px; font-size:14px; color:#64748b; line-height:1.6;">카드 내용을 여기에 작성하세요. 클릭해서 바로 편집할 수 있습니다.</p><button style="padding:8px 18px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer;">자세히 보기</button></div>`
-    },
-    {
-        category: 'component', name: '알림 배너', desc: '정보 전달용 인라인 알림',
-        html: `<div style="display:flex; gap:10px; align-items:flex-start; padding:14px 16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1d4ed8; font-size:14px;"><span>ℹ️</span><div><strong style="display:block; margin-bottom:2px;">알림 제목</strong><span style="color:#3b82f6;">전달할 안내 메시지를 여기에 작성하세요.</span></div></div>`
-    },
-    {
-        category: 'component', name: '배지 세트', desc: '상태 표시용 배지 4종',
-        html: `<div style="display:flex; gap:8px; flex-wrap:wrap; padding:6px 0;"><span style="padding:4px 12px; background:#eef2ff; color:#6366f1; border-radius:999px; font-size:12px; font-weight:600;">신규</span><span style="padding:4px 12px; background:#f0fdf4; color:#16a34a; border-radius:999px; font-size:12px; font-weight:600;">완료</span><span style="padding:4px 12px; background:#fffbeb; color:#d97706; border-radius:999px; font-size:12px; font-weight:600;">진행 중</span><span style="padding:4px 12px; background:#fef2f2; color:#dc2626; border-radius:999px; font-size:12px; font-weight:600;">긴급</span></div>`
-    },
-    {
-        category: 'component', name: '입력 필드', desc: '레이블이 있는 텍스트 입력',
-        html: `<div style="max-width:340px; padding:6px 0;"><label style="display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#334155;">이름</label><input type="text" placeholder="이름을 입력하세요" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;"></div>`
-    },
-    // 섹션
-    {
-        category: 'section', name: '히어로 섹션', desc: '큰 제목 + 설명 + CTA 버튼',
-        html: `<section style="text-align:center; padding:80px 24px; background:linear-gradient(135deg, #eef2ff, #f5f3ff);"><h1 style="margin:0 0 14px; font-size:40px; letter-spacing:-0.02em; color:#1e293b;">멋진 제품을 소개합니다</h1><p style="margin:0 0 26px; font-size:17px; color:#64748b;">한 문장으로 제품의 핵심 가치를 전달하세요.</p><button style="padding:13px 30px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer;">지금 시작하기</button></section>`
-    },
-    {
-        category: 'section', name: '특징 3열', desc: '아이콘·제목·설명 3열 그리드',
-        html: `<section style="display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; max-width:960px; margin:0 auto; padding:56px 24px;"><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">⚡ 빠른 속도</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🔒 안전한 보안</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🎨 쉬운 사용</h3><p style="margin:0; font-size:14px; color:#64748b;">특징에 대한 설명을 작성하세요.</p></div></section>`
-    },
-    {
-        category: 'section', name: 'CTA 배너', desc: '행동 유도 풀와이드 배너',
-        html: `<section style="text-align:center; padding:52px 24px; background:#6366f1; border-radius:16px; margin:24px;"><h2 style="margin:0 0 10px; font-size:26px; color:#fff;">지금 바로 시작해보세요</h2><p style="margin:0 0 22px; font-size:15px; color:#e0e7ff;">가입은 무료이며 1분이면 충분합니다.</p><button style="padding:12px 28px; background:#fff; color:#6366f1; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">무료로 시작하기</button></section>`
-    },
-    {
-        category: 'section', name: '푸터', desc: '저작권·링크가 있는 페이지 하단',
-        html: `<footer style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:30px 32px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:13px;"><span>© 2026 회사명. All rights reserved.</span><nav style="display:flex; gap:18px;"><a href="#" style="color:#64748b; text-decoration:none;">이용약관</a><a href="#" style="color:#64748b; text-decoration:none;">개인정보처리방침</a><a href="#" style="color:#64748b; text-decoration:none;">문의</a></nav></footer>`
-    },
-    // 페이지
-    {
-        category: 'page', name: '미니 랜딩 페이지', desc: '히어로 + 특징 + 푸터 구성',
-        html: `<section style="text-align:center; padding:80px 24px; background:linear-gradient(135deg, #eef2ff, #f5f3ff);"><h1 style="margin:0 0 14px; font-size:40px; letter-spacing:-0.02em; color:#1e293b;">제품 이름</h1><p style="margin:0 0 26px; font-size:17px; color:#64748b;">제품의 핵심 가치를 한 문장으로 전달하세요.</p><button style="padding:13px 30px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer;">시작하기</button></section><section style="display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; max-width:960px; margin:0 auto; padding:56px 24px;"><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">⚡ 특징 1</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">🧩 특징 2</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div><div style="padding:24px; border:1px solid #e2e8f0; border-radius:14px;"><h3 style="margin:0 0 8px; font-size:16px;">📥 특징 3</h3><p style="margin:0; font-size:14px; color:#64748b;">설명을 작성하세요.</p></div></section><footer style="text-align:center; padding:30px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:13px;">© 2026 회사명. All rights reserved.</footer>`
-    },
-    {
-        category: 'page', name: '심플 문서', desc: '제목·부제·본문 구조의 문서 레이아웃',
-        html: `<article style="max-width:720px; margin:0 auto; padding:48px 24px;"><h1 style="margin:0 0 6px; font-size:32px; color:#1e293b;">문서 제목</h1><p style="margin:0 0 28px; font-size:14px; color:#94a3b8;">작성일: 2026-01-01 · 작성자: 홍길동</p><h2 style="margin:0 0 10px; font-size:22px; color:#1e293b;">첫 번째 소제목</h2><p style="margin:0 0 22px; font-size:15px; color:#475569; line-height:1.7;">본문 내용을 작성하세요. 요소를 클릭하면 바로 편집할 수 있습니다.</p><h2 style="margin:0 0 10px; font-size:22px; color:#1e293b;">두 번째 소제목</h2><p style="margin:0; font-size:15px; color:#475569; line-height:1.7;">이어지는 본문 내용을 작성하세요.</p></article>`
-    }
-];
 
 // 에디터 초기화
 document.addEventListener('DOMContentLoaded', () => {
