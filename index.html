@@ -428,12 +428,11 @@
     <div class="context-menu" id="contextMenu" style="display: none;">
         <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
         <div class="context-menu-separator"></div>
-        <!-- 유사 선택: Phase 2에서 구현 예정 -->
-        <div class="context-menu-item" data-action="select-same-tag" style="display:none;">🧲 같은 태그 모두 선택</div>
-        <div class="context-menu-item" data-action="select-tag-class" style="display:none;">🧲 태그+클래스 일치 선택</div>
-        <div class="context-menu-item" data-action="select-siblings" style="display:none;">🧲 형제 모두 선택</div>
-        <div class="context-menu-item" data-action="select-descendants" style="display:none;">🧲 하위 동일 태그 전체</div>
-        <div class="context-menu-separator" style="display:none;"></div>
+        <div class="context-menu-item" data-action="select-same-tag">🧲 같은 태그 모두 선택</div>
+        <div class="context-menu-item" data-action="select-tag-class">🧲 태그+클래스 일치 선택</div>
+        <div class="context-menu-item" data-action="select-siblings">🧲 형제 모두 선택</div>
+        <div class="context-menu-item" data-action="select-descendants">🧲 하위 동일 태그 전체</div>
+        <div class="context-menu-separator"></div>
         <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
         <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
         <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
@@ -468,8 +467,7 @@
         <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
         <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
         <button class="toolbar-btn" data-action="style" title="스타일 편집">🎨</button>
-        <!-- 유사 선택: Phase 2에서 구현 예정 -->
-        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (준비 중)" style="display:none;">🧲</button>
+        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)">🧲</button>
         <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
         <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
     </div>
@@ -577,6 +575,9 @@
                 <div class="shortcut-group">
                     <h4>선택</h4>
                     <div class="shortcut-row"><span>다중 선택 추가</span><div class="keys"><span class="key">Shift</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>동일 태그+클래스 일괄</span><div class="keys"><span class="key">Alt</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>범위 선택 (형제)</span><div class="keys"><span class="key">Ctrl</span><span class="key">Shift</span>+클릭</div></div>
+                    <div class="shortcut-row"><span>모든 같은 태그</span><div class="keys"><span class="key">Ctrl</span><span class="key">A</span></div></div>
                     <div class="shortcut-row"><span>선택 해제 / 닫기</span><div class="keys"><span class="key">Esc</span></div></div>
                 </div>
                 <div class="shortcut-group">

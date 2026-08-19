@@ -362,8 +362,9 @@ class HTMLLiveEditor {
 
     renderHTML() {
         const iframe = this.previewFrame;
-        iframe.src = 'about:blank';
 
+        // onload를 src 할당보다 먼저 설정 (역순이면 로드가 먼저 끝나
+        // 콜백을 놓치고 미리보기가 빈 화면이 될 수 있음)
         iframe.onload = () => {
             try {
                 const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -389,6 +390,8 @@ class HTMLLiveEditor {
                 iframe.onload = null;
             }
         };
+
+        iframe.src = 'about:blank';
     }
 
     // iframe에 에디터 스타일 주입
@@ -403,6 +406,11 @@ class HTMLLiveEditor {
             .element-hover {
                 outline: 1px dashed #007bff !important;
                 outline-offset: 1px;
+            }
+            .element-multi-selected {
+                outline: 2px solid #6366f1 !important;
+                outline-offset: 1px;
+                background-color: rgba(99, 102, 241, 0.08) !important;
             }
             .element-dragging {
                 opacity: 0.5 !important;
@@ -492,11 +500,8 @@ class HTMLLiveEditor {
 
             this.dragStartPos = { x: e.clientX, y: e.clientY };
             this.potentialDragElement = target;
-
-            // 드래그 시작 대기 (100ms 후 드래그 시작)
-            this.dragStartTimeout = setTimeout(() => {
-                this.startDrag(target, e);
-            }, 150);
+            // 실제 드래그는 마우스가 5px 이상 움직였을 때만 시작
+            // (제자리 클릭·홀드가 드래그로 오인되지 않도록)
         });
 
         // 마우스 이동 이벤트
@@ -507,7 +512,6 @@ class HTMLLiveEditor {
                 const dy = Math.abs(e.clientY - this.dragStartPos.y);
                 if (dx < 5 && dy < 5) return;
 
-                clearTimeout(this.dragStartTimeout);
                 this.startDrag(this.potentialDragElement, e);
             }
 
@@ -518,7 +522,6 @@ class HTMLLiveEditor {
 
         // 마우스 업 이벤트 (드래그 종료)
         doc.body.addEventListener('mouseup', (e) => {
-            clearTimeout(this.dragStartTimeout);
             this.potentialDragElement = null;
 
             if (this.isDragging) {
@@ -573,6 +576,8 @@ class HTMLLiveEditor {
 
         for (const el of elementsAtPoint) {
             if (el === this.draggedElement) continue;
+            // 자기 자신의 자손에게는 드롭 불가 (insertBefore가 HierarchyRequestError로 크래시)
+            if (this.draggedElement.contains(el)) continue;
             if (el.classList.contains('editable-text')) continue;
             if (['HTML', 'HEAD', 'BODY', 'SCRIPT', 'STYLE'].includes(el.tagName)) continue;
 
@@ -659,6 +664,7 @@ class HTMLLiveEditor {
 
     performDrop() {
         if (!this.draggedElement || !this.dropTarget) return;
+        if (this.draggedElement.contains(this.dropTarget)) return;
 
         const parent = this.dropTarget.parentNode;
 
@@ -678,7 +684,7 @@ class HTMLLiveEditor {
 
     // ============== 스타일 패널 ==============
     showStylePanel() {
-        if (!this.selectedElement) {
+        if (!this.selectedElement && this.selectedElements.length === 0) {
             this.showToast('먼저 요소를 선택해주세요.', 'warning');
             return;
         }
@@ -686,6 +692,10 @@ class HTMLLiveEditor {
         this.stylePanel.style.display = 'block';
         this.stylePanelOpen = true;
         this.loadCurrentStyles();
+
+        if (this.selectedElements.length > 1) {
+            this.showToast(`${this.selectedElements.length}개 요소에 스타일이 일괄 적용됩니다.`, 'info');
+        }
     }
 
     hideStylePanel() {
@@ -694,10 +704,13 @@ class HTMLLiveEditor {
     }
 
     loadCurrentStyles() {
-        if (!this.selectedElement) return;
+        // 다중 선택만 있는 경우 첫 요소 기준으로 현재 값 표시
+        const reference = this.selectedElement || this.selectedElements[0];
+        if (!reference) return;
 
-        const computed = window.getComputedStyle(this.selectedElement);
-        const style = this.selectedElement.style;
+        const view = reference.ownerDocument.defaultView || window;
+        const computed = view.getComputedStyle(reference);
+        const style = reference.style;
 
         // 배경색
         const bgColor = style.backgroundColor || computed.backgroundColor;
@@ -738,13 +751,22 @@ class HTMLLiveEditor {
         document.getElementById('paddingRight').value = parseInt(style.paddingRight || computed.paddingRight) || 0;
     }
 
+    // 스타일·삭제·복제 등 일괄 작업 대상: 다중 선택이 있으면 전체, 없으면 단일 선택
+    getBatchTargets() {
+        if (this.selectedElements.length > 0) return [...this.selectedElements];
+        return this.selectedElement ? [this.selectedElement] : [];
+    }
+
     applyStyle(property, value) {
-        if (!this.selectedElement) {
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) {
             this.showToast('먼저 요소를 선택해주세요.', 'warning');
             return;
         }
 
-        this.selectedElement.style[property] = value;
+        targets.forEach(el => {
+            el.style[property] = value;
+        });
         this.saveToHistory(`스타일 변경: ${property}`, false);
     }
 
@@ -1075,6 +1097,12 @@ ${html.substring(0, 3000)}
                         return NodeFilter.FILTER_REJECT;
                     }
 
+                    // span으로 감싸면 값·렌더링이 깨지는 컨테이너는 조상까지 확인해 제외
+                    // (textarea 값 파괴, pre/code 서식 변형, svg 내 HTML 삽입 등)
+                    if (parent.closest && parent.closest('textarea, pre, code, svg, noscript, select, option')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
                     const text = node.textContent.trim();
                     if (text.length === 0) {
                         return NodeFilter.FILTER_REJECT;
@@ -1123,6 +1151,21 @@ ${html.substring(0, 3000)}
         }
     }
 
+    // DOCTYPE까지 포함해 문서를 직렬화 (outerHTML만 쓰면 doctype이 사라져
+    // undo 이후·다운로드 파일이 quirks mode로 렌더링됨)
+    serializeDocument(doc) {
+        let doctype = '';
+        if (doc.doctype) {
+            const dt = doc.doctype;
+            doctype = '<!DOCTYPE ' + dt.name
+                + (dt.publicId ? ` PUBLIC "${dt.publicId}"` : '')
+                + (!dt.publicId && dt.systemId ? ' SYSTEM' : '')
+                + (dt.systemId ? ` "${dt.systemId}"` : '')
+                + '>\n';
+        }
+        return doctype + doc.documentElement.outerHTML;
+    }
+
     doSaveToHistory(actionName) {
         const iframe = this.previewFrame;
         const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1133,7 +1176,7 @@ ${html.substring(0, 3000)}
         }
 
         const snapshot = {
-            html: doc.documentElement.outerHTML,
+            html: this.serializeDocument(doc),
             action: actionName,
             timestamp: Date.now(),
             selectedElementSelector: selectedElementSelector
@@ -1289,6 +1332,7 @@ ${html.substring(0, 3000)}
             this.selectedElement = null;
         }
 
+        this.clearMultiSelection();
         this.contextMenuTarget = null;
         this.hideFloatingToolbar();
         this.hideContextualMenus();
@@ -1297,8 +1341,6 @@ ${html.substring(0, 3000)}
 
     resetAndLoadIframe(iframe, html) {
         return new Promise((resolve, reject) => {
-            iframe.src = 'about:blank';
-
             iframe.onload = () => {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1316,6 +1358,8 @@ ${html.substring(0, 3000)}
                     reject(error);
                 }
             };
+
+            iframe.src = 'about:blank';
 
             setTimeout(() => {
                 iframe.onload = null;
@@ -1440,9 +1484,14 @@ ${html.substring(0, 3000)}
 
     handleKeydown(event) {
         const typing = this.isTypingContext(event);
+        // iframe 안의 편집용 텍스트 스팬에서 입력 중인지 (일반 입력창과 구분)
+        const inEditableSpan = typing && event.target.closest && !!event.target.closest('.editable-text');
 
-        // Escape: 어디서든 열린 UI 닫기
+        // Escape: 어디서든 열린 UI 닫기 (텍스트 편집 중이면 편집 종료)
         if (event.key === 'Escape') {
+            if (inEditableSpan) {
+                event.target.closest('.editable-text').blur();
+            }
             if (this.commandPaletteVisible) {
                 this.closeCommandPalette();
                 return;
@@ -1454,6 +1503,7 @@ ${html.substring(0, 3000)}
             this.hidePathModal();
             this.closeSidePanels();
             this.closeEditorDropdown();
+            this.hideSimilarDropdown();
             if (!typing) this.clearMultiSelection();
             return;
         }
@@ -1465,8 +1515,15 @@ ${html.substring(0, 3000)}
             return;
         }
 
-        // 입력 중에는 브라우저 기본 동작(텍스트 undo, 문자 입력 등)을 존중
-        if (typing) return;
+        // 입력 중에는 브라우저 기본 동작(텍스트 undo, 문자 입력 등)을 존중.
+        // 단, iframe의 편집 스팬 안에서는 텍스트 편집과 충돌하지 않는
+        // 요소 수준 Ctrl 단축키(Ctrl+D, Ctrl+Shift+L/O)는 통과시킴
+        if (typing) {
+            const elementLevelCombo =
+                (event.ctrlKey && event.shiftKey && ['l', 'o'].includes(event.key.toLowerCase())) ||
+                (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'd');
+            if (!inEditableSpan || !elementLevelCombo) return;
+        }
 
         if (event.ctrlKey && event.shiftKey && (event.key === 'l' || event.key === 'L')) {
             event.preventDefault();
@@ -1475,9 +1532,15 @@ ${html.substring(0, 3000)}
             event.preventDefault();
             this.openInExternalEditor(this.preferredEditor);
         } else if (event.ctrlKey && !event.shiftKey && (event.key === 'd' || event.key === 'D')) {
-            if (this.selectedElement) {
+            if (this.selectedElement || this.selectedElements.length > 0) {
                 event.preventDefault();
                 this.duplicateElement();
+            }
+        } else if (event.ctrlKey && !event.shiftKey && (event.key === 'a' || event.key === 'A')) {
+            // Ctrl+A: 선택 요소와 같은 태그 전체 선택
+            if (this.selectedElement) {
+                event.preventDefault();
+                this.selectSimilar(this.selectedElement, 'tag');
             }
         } else if (event.ctrlKey && event.key.toLowerCase() === 'z' && !event.shiftKey) {
             event.preventDefault();
@@ -1516,8 +1579,8 @@ ${html.substring(0, 3000)}
             // 아래 화살표: 요소를 아래로 이동
             event.preventDefault();
             this.moveElement(this.selectedElement, 'down');
-        } else if (event.key === 'Delete' && this.selectedElement) {
-            // Delete: 요소 삭제
+        } else if (event.key === 'Delete' && (this.selectedElement || this.selectedElements.length > 0)) {
+            // Delete: 요소 삭제 (다중 선택 포함)
             event.preventDefault();
             this.deleteElement();
         }
@@ -1583,8 +1646,17 @@ ${html.substring(0, 3000)}
             if (target) {
                 e.preventDefault();
                 e.stopPropagation();
-                // Shift+클릭: 다중 선택
-                this.selectElement(target, e.shiftKey);
+
+                if (e.altKey) {
+                    // Alt+클릭: 같은 태그+클래스 요소 일괄 선택
+                    this.selectSimilar(target, 'tag-class');
+                } else if (e.ctrlKey && e.shiftKey) {
+                    // Ctrl+Shift+클릭: 기존 선택과 같은 부모 안에서 범위 선택
+                    this.selectSiblingRange(target);
+                } else {
+                    // Shift+클릭: 다중 선택
+                    this.selectElement(target, e.shiftKey);
+                }
             }
         };
 
@@ -1609,6 +1681,10 @@ ${html.substring(0, 3000)}
             doc.body.addEventListener('mouseleave', mouseleaveHandler, true);
             doc.body.addEventListener('click', clickHandler, true);
             doc.body.addEventListener('contextmenu', contextmenuHandler, true);
+
+            // iframe에 포커스가 있어도 단축키가 동작하도록 iframe 문서에도 바인딩
+            // (편집 중 대부분의 시간 동안 포커스는 iframe 안에 있음)
+            doc.addEventListener('keydown', (e) => this.handleKeydown(e));
 
             this.currentEventListeners = [
                 { event: 'mouseenter', handler: mouseenterHandler },
@@ -1690,6 +1766,12 @@ ${html.substring(0, 3000)}
 
     selectElement(element, addToSelection = false) {
         if (addToSelection) {
+            // 첫 Shift+클릭이면 기존 단일 선택 요소도 다중 선택에 포함
+            if (this.selectedElements.length === 0 && this.selectedElement && this.selectedElement !== element) {
+                this.selectedElement.classList.add('element-multi-selected');
+                this.selectedElements.push(this.selectedElement);
+            }
+
             // Shift+클릭: 다중 선택
             if (this.selectedElements.includes(element)) {
                 // 이미 선택된 요소면 제거
@@ -1701,6 +1783,7 @@ ${html.substring(0, 3000)}
                 this.selectedElements.push(element);
             }
             this.updateSelectionCount();
+            this.blurIframeText();
             return;
         }
 
@@ -1741,6 +1824,160 @@ ${html.substring(0, 3000)}
         } else {
             this.selectionCount.style.display = 'none';
         }
+    }
+
+    // 다중 선택 직후 Delete 등 요소 단축키가 바로 동작하도록 텍스트 편집 포커스 해제
+    blurIframeText() {
+        const doc = this.getPreviewDoc();
+        if (doc && doc.activeElement && doc.activeElement.classList &&
+            doc.activeElement.classList.contains('editable-text')) {
+            doc.activeElement.blur();
+        }
+    }
+
+    // ============== 유사 요소 일괄 선택 ==============
+    getEditorClasses() {
+        return ['element-selected', 'element-hover', 'element-multi-selected', 'element-dragging', 'element-similar-preview', 'drop-target-highlight', 'editable-text', 'editing'];
+    }
+
+    getContentClasses(element) {
+        const editorClasses = this.getEditorClasses();
+        return Array.from(element.classList).filter(cls => !editorClasses.includes(cls) && !cls.startsWith('drop-indicator-'));
+    }
+
+    getSimilarElements(element, scope) {
+        const doc = element.ownerDocument;
+        const tag = element.tagName.toLowerCase();
+        let candidates = [];
+
+        switch (scope) {
+            case 'tag':
+                candidates = Array.from(doc.body.querySelectorAll(tag));
+                break;
+            case 'tag-class': {
+                const classes = this.getContentClasses(element).sort().join(' ');
+                candidates = Array.from(doc.body.querySelectorAll(tag))
+                    .filter(el => this.getContentClasses(el).sort().join(' ') === classes);
+                break;
+            }
+            case 'class': {
+                const classes = this.getContentClasses(element);
+                if (classes.length === 0) return [element];
+                candidates = Array.from(doc.body.querySelectorAll('*'))
+                    .filter(el => classes.some(cls => el.classList.contains(cls)));
+                break;
+            }
+            case 'siblings':
+                candidates = element.parentElement ? Array.from(element.parentElement.children) : [element];
+                break;
+            case 'descendants-same-tag':
+                candidates = [element, ...element.querySelectorAll(tag)];
+                break;
+            default:
+                return [element];
+        }
+
+        return candidates.filter(el => this.isValidEditTarget(el) && !el.classList.contains('editable-text'));
+    }
+
+    selectSimilar(element, scope) {
+        const matches = this.getSimilarElements(element, scope);
+        if (matches.length === 0) return;
+
+        // 기준 요소를 단일 선택으로 잡은 뒤 전체를 다중 선택에 추가
+        this.selectElement(element);
+        this.clearMultiSelection();
+
+        matches.forEach(el => {
+            el.classList.add('element-multi-selected');
+            this.selectedElements.push(el);
+        });
+        this.updateSelectionCount();
+        this.blurIframeText();
+        this.showToast(`${matches.length}개 요소가 선택되었습니다.`, 'info');
+    }
+
+    // Ctrl+Shift+클릭: 현재 선택과 같은 부모 안에서 두 요소 사이의 형제들을 범위 선택
+    selectSiblingRange(target) {
+        const anchor = this.selectedElement;
+        if (!anchor || anchor === target || anchor.parentElement !== target.parentElement) {
+            this.selectElement(target);
+            return;
+        }
+
+        const siblings = Array.from(target.parentElement.children);
+        const start = siblings.indexOf(anchor);
+        const end = siblings.indexOf(target);
+        if (start === -1 || end === -1) {
+            this.selectElement(target);
+            return;
+        }
+
+        const [from, to] = start < end ? [start, end] : [end, start];
+        this.clearMultiSelection();
+
+        for (let i = from; i <= to; i++) {
+            const el = siblings[i];
+            if (!this.isValidEditTarget(el)) continue;
+            el.classList.add('element-multi-selected');
+            this.selectedElements.push(el);
+        }
+        this.updateSelectionCount();
+        this.blurIframeText();
+        this.showToast(`${this.selectedElements.length}개 요소가 범위 선택되었습니다.`, 'info');
+    }
+
+    showSimilarDropdown() {
+        if (!this.selectedElement) return;
+
+        const dropdown = document.getElementById('similarDropdown');
+        if (!dropdown) return;
+
+        // 각 범위별 대상 개수 미리 표시
+        const counts = {
+            tag: this.getSimilarElements(this.selectedElement, 'tag').length,
+            'tag-class': this.getSimilarElements(this.selectedElement, 'tag-class').length,
+            class: this.getSimilarElements(this.selectedElement, 'class').length,
+            siblings: this.getSimilarElements(this.selectedElement, 'siblings').length,
+            'descendants-same-tag': this.getSimilarElements(this.selectedElement, 'descendants-same-tag').length
+        };
+        const countIds = {
+            tag: 'similarCountTag',
+            'tag-class': 'similarCountTagClass',
+            class: 'similarCountClass',
+            siblings: 'similarCountSiblings',
+            'descendants-same-tag': 'similarCountDesc'
+        };
+        Object.entries(countIds).forEach(([scope, id]) => {
+            const span = document.getElementById(id);
+            if (span) span.textContent = counts[scope];
+        });
+
+        // 플로팅 툴바 아래에 표시 (뷰포트 좌표 기준이므로 fixed 사용)
+        const toolbarRect = this.floatingToolbar.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = toolbarRect.left + 'px';
+        dropdown.style.top = (toolbarRect.bottom + 6) + 'px';
+        dropdown.classList.add('open');
+    }
+
+    hideSimilarDropdown() {
+        const dropdown = document.getElementById('similarDropdown');
+        if (dropdown) dropdown.classList.remove('open');
+    }
+
+    bindSimilarDropdown() {
+        const dropdown = document.getElementById('similarDropdown');
+        if (!dropdown) return;
+
+        dropdown.querySelectorAll('.similar-option').forEach(option => {
+            option.addEventListener('click', () => {
+                this.hideSimilarDropdown();
+                if (this.selectedElement) {
+                    this.selectSimilar(this.selectedElement, option.dataset.scope);
+                }
+            });
+        });
     }
 
     // ============== DOM 네비게이터 ==============
@@ -2029,6 +2266,12 @@ ${html.substring(0, 3000)}
         if (dropdown && !dropdown.contains(event.target)) {
             dropdown.classList.remove('open');
         }
+
+        // 유사 선택 드롭다운: 바깥 클릭 시 닫기 (🧲 버튼 클릭은 토글 로직이 처리)
+        const similarDropdown = document.getElementById('similarDropdown');
+        if (similarDropdown && !similarDropdown.contains(event.target) && !this.floatingToolbar.contains(event.target)) {
+            similarDropdown.classList.remove('open');
+        }
     }
 
     handleContextMenuClick(event) {
@@ -2041,11 +2284,26 @@ ${html.substring(0, 3000)}
         const doc = iframe.contentDocument || iframe.contentWindow.document;
 
         this.hideContextualMenus();
-        this.selectElement(element);
+        // 다중 선택된 요소 위에서의 액션은 다중 선택을 유지한 채 실행
+        if (!this.selectedElements.includes(element)) {
+            this.selectElement(element);
+        }
 
         switch (action) {
             case 'style':
                 this.showStylePanel();
+                break;
+            case 'select-same-tag':
+                this.selectSimilar(element, 'tag');
+                break;
+            case 'select-tag-class':
+                this.selectSimilar(element, 'tag-class');
+                break;
+            case 'select-siblings':
+                this.selectSimilar(element, 'siblings');
+                break;
+            case 'select-descendants':
+                this.selectSimilar(element, 'descendants-same-tag');
                 break;
             case 'add-button':
                 this.addElement(doc, 'button', '새 버튼');
@@ -2131,6 +2389,15 @@ ${html.substring(0, 3000)}
             case 'style':
                 this.showStylePanel();
                 break;
+            case 'similar': {
+                const dropdown = document.getElementById('similarDropdown');
+                if (dropdown && dropdown.classList.contains('open')) {
+                    this.hideSimilarDropdown();
+                } else {
+                    this.showSimilarDropdown();
+                }
+                break;
+            }
             case 'duplicate':
                 this.duplicateElement();
                 break;
@@ -2205,11 +2472,14 @@ ${html.substring(0, 3000)}
             case 'li':
                 newElement.textContent = textContent;
                 break;
-            case 'img':
-                newElement.src = 'https://via.placeholder.com/150x100';
+            case 'img': {
+                // 외부 placeholder 서비스 대신 인라인 SVG 사용 (via.placeholder.com은 서비스 종료됨)
+                const placeholderSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="100"><rect width="150" height="100" fill="#e2e8f0"/><rect x="0.5" y="0.5" width="149" height="99" fill="none" stroke="#94a3b8" stroke-dasharray="4 3"/><text x="75" y="55" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#64748b">150 × 100</text></svg>';
+                newElement.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(placeholderSvg);
                 newElement.alt = '새 이미지';
                 newElement.style.maxWidth = '100%';
                 break;
+            }
             case 'a':
                 newElement.textContent = textContent;
                 newElement.href = '#';
@@ -2284,52 +2554,68 @@ ${html.substring(0, 3000)}
     }
 
     duplicateElement() {
-        if (!this.selectedElement) return;
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) return;
 
-        const element = this.selectedElement;
-        const tagName = element.tagName.toLowerCase();
+        let lastClone = null;
+        targets.forEach(element => {
+            if (!element.parentNode) return;
 
-        const clone = element.cloneNode(true);
-        element.parentNode.insertBefore(clone, element.nextSibling);
+            const clone = element.cloneNode(true);
+            element.parentNode.insertBefore(clone, element.nextSibling);
 
-        this.setupElementEventListeners(clone);
+            clone.removeAttribute('data-editor-initialized');
+            clone.classList.remove('element-selected', 'element-multi-selected');
+            clone.querySelectorAll('*').forEach(child => {
+                child.removeAttribute('data-editor-initialized');
+                child.classList.remove('element-selected', 'element-multi-selected');
+            });
+            // 클론에는 이벤트 리스너가 복사되지 않으므로 텍스트 편집 바인딩 재적용
+            clone.querySelectorAll('.editable-text').forEach(span => this.bindEditableSpan(span));
 
-        const childElements = clone.querySelectorAll('*');
-        childElements.forEach(child => {
-            child.removeAttribute('data-editor-initialized');
-            this.setupElementEventListeners(child);
+            lastClone = clone;
         });
 
-        this.selectElement(clone);
-        this.saveToHistory(`${tagName} 요소 복제`, true);
-        this.showToast('요소가 복제되었습니다.', 'success');
+        if (!lastClone) return;
+
+        if (targets.length > 1) {
+            this.clearMultiSelection();
+            this.saveToHistory(`요소 ${targets.length}개 복제`, true);
+            this.showToast(`${targets.length}개 요소가 복제되었습니다.`, 'success');
+        } else {
+            this.selectElement(lastClone);
+            this.saveToHistory(`${targets[0].tagName.toLowerCase()} 요소 복제`, true);
+            this.showToast('요소가 복제되었습니다.', 'success');
+        }
     }
 
     deleteElement() {
-        if (!this.selectedElement) return;
+        const targets = this.getBatchTargets()
+            .filter(el => !['html', 'head', 'body'].includes(el.tagName.toLowerCase()));
 
-        const element = this.selectedElement;
-        const tagName = element.tagName.toLowerCase();
-
-        if (['html', 'head', 'body'].includes(tagName)) {
-            this.showToast(`${tagName} 요소는 삭제할 수 없습니다.`, 'error');
+        if (targets.length === 0) {
+            if (this.selectedElement) {
+                this.showToast(`${this.selectedElement.tagName.toLowerCase()} 요소는 삭제할 수 없습니다.`, 'error');
+            }
             return;
         }
 
-        const childCount = element.children.length;
-        if (childCount > 5) {
-            const confirmed = confirm(`이 ${tagName} 요소는 ${childCount}개의 자식 요소를 포함하고 있습니다. 정말 삭제하시겠습니까?`);
-            if (!confirmed) return;
+        // 큰 컨테이너나 다중 삭제는 한 번만 확인
+        const bigTarget = targets.find(el => el.children.length > 5);
+        if (targets.length > 1 || bigTarget) {
+            const message = targets.length > 1
+                ? `선택된 ${targets.length}개 요소를 모두 삭제하시겠습니까?`
+                : `이 ${bigTarget.tagName.toLowerCase()} 요소는 ${bigTarget.children.length}개의 자식 요소를 포함하고 있습니다. 정말 삭제하시겠습니까?`;
+            if (!confirm(message)) return;
         }
 
         try {
-            const parent = element.parentNode;
-            if (parent) {
-                parent.removeChild(element);
-                this.clearSelection();
-                this.saveToHistory(`${tagName} 요소 삭제`, true);
-                this.showToast('요소가 삭제되었습니다.', 'success');
-            }
+            targets.forEach(element => {
+                if (element.parentNode) element.parentNode.removeChild(element);
+            });
+            this.clearSelection();
+            this.saveToHistory(targets.length > 1 ? `요소 ${targets.length}개 삭제` : `${targets[0].tagName.toLowerCase()} 요소 삭제`, true);
+            this.showToast(targets.length > 1 ? `${targets.length}개 요소가 삭제되었습니다.` : '요소가 삭제되었습니다.', 'success');
         } catch (error) {
             console.error('삭제 중 오류:', error);
             this.showToast('요소 삭제 중 오류가 발생했습니다.', 'error');
@@ -2476,9 +2762,12 @@ ${html.substring(0, 3000)}
         });
 
         // 요소 편집 관련 클래스 제거
-        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover, .element-dragging, .drop-target-highlight');
+        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover, .element-dragging, .drop-target-highlight, .element-multi-selected, .element-similar-preview');
         selectedElements.forEach(element => {
-            element.classList.remove('element-selected', 'element-hover', 'element-dragging', 'drop-target-highlight');
+            element.classList.remove('element-selected', 'element-hover', 'element-dragging', 'drop-target-highlight', 'element-multi-selected', 'element-similar-preview');
+            if (!element.getAttribute('class')) {
+                element.removeAttribute('class');
+            }
         });
 
         // data 속성 제거
@@ -2488,7 +2777,7 @@ ${html.substring(0, 3000)}
             element.removeAttribute('data-original');
         });
 
-        return clonedDoc.documentElement.outerHTML;
+        return this.serializeDocument(clonedDoc);
     }
 
     downloadHTML() {
@@ -2564,6 +2853,7 @@ ${html.substring(0, 3000)}
         this.bindEditorDropdown();
         this.bindPathModal();
         this.bindShortcutsModal();
+        this.bindSimilarDropdown();
     }
 
     getPreviewDoc() {
