@@ -91,7 +91,15 @@ PR #3(`3992b8f`)에서 새 UI 셸(HTML/CSS)과 생성자 초기화 코드만 머
 11. placeholder 이미지를 인라인 SVG data URI로 교체 (#11).
 12. `renderHTML`에서 onload를 src 할당 전에 설정하거나 `srcdoc` 방식으로 전환 (#12).
 
-### Phase 3 — 보안·AI 개선 (규모: 소~중)
+### Phase 3 — 보안·AI 개선 (규모: 소~중) ✅ 구현 완료
+
+> 2026-08-19 구현 완료. 헤드리스 Chromium 검증 16항목 통과, Phase 1·2 스위트(35항목) 회귀 통과.
+> iframe은 기본 `sandbox="allow-same-origin"`으로 문서 스크립트를 차단하고(편집 기능은 전부
+> 정상 동작 확인), `<script>` 포함 문서 로드 시 사용자 동의로만 `allow-scripts`를 추가함.
+> 다운로드 파일에는 원본 스크립트가 그대로 보존됨. AI 기본 모델은 Gemini `gemini-2.5-flash`,
+> Claude `claude-opus-5`, GPT `gpt-4o-mini`로 갱신했고, AI 모달의 "모델명" 입력으로 프로바이더별
+> 재정의 가능(localStorage). AI에는 편집용 스팬·에디터 클래스·스크립트를 제거한 정리된 HTML을
+> 전송하며, HTTP 오류와 Claude `stop_reason: "refusal"`을 명시적으로 처리함.
 
 13. iframe에 `sandbox="allow-same-origin"`(스크립트 차단)을 기본 적용하고, 스크립트 실행이 필요한 경우 사용자 확인 후 허용 (#13).
 14. API 키 안내 문구를 "키는 브라우저(localStorage)에 저장되며, 선택한 AI 제공사에만 전송됩니다"로 수정 (#14).

@@ -44,6 +44,8 @@ class HTMLLiveEditor {
         this.activeTemplateCategory = 'component';
         this.commandPaletteVisible = false;
         this.autosaveTimer = null;
+        // 문서 내 스크립트 실행 여부 (기본 차단 — 로드 시 사용자 동의로만 허용)
+        this.allowScripts = false;
 
         this.initializeElements();
         this.bindEvents();
@@ -277,11 +279,14 @@ class HTMLLiveEditor {
 
     // ============== AI 모달 이벤트 바인딩 ==============
     bindAIModalEvents() {
-        // 모델 선택
+        this.aiModelInput = document.getElementById('aiModelInput');
+
+        // 프로바이더 선택
         document.querySelectorAll('input[name="aiModel"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 this.aiSettings.model = e.target.value;
                 this.loadApiKeyForModel(e.target.value);
+                this.loadModelNameForProvider(e.target.value);
             });
         });
 
@@ -290,12 +295,32 @@ class HTMLLiveEditor {
             this.saveApiKey(this.aiSettings.model, e.target.value);
         });
 
+        // 모델명 저장 (프로바이더별)
+        if (this.aiModelInput) {
+            this.aiModelInput.addEventListener('change', (e) => {
+                localStorage.setItem(`ai_model_${this.aiSettings.model}`, e.target.value.trim());
+            });
+        }
+
         // 빠른 프롬프트
         document.querySelectorAll('.quick-prompt-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.aiPrompt.value = btn.dataset.prompt;
             });
         });
+    }
+
+    getAIModelName(provider) {
+        const custom = (localStorage.getItem(`ai_model_${provider}`) || '').trim();
+        return custom || AI_PROVIDERS[provider].defaultModel;
+    }
+
+    loadModelNameForProvider(provider) {
+        if (!this.aiModelInput) return;
+        this.aiModelInput.value = (localStorage.getItem(`ai_model_${provider}`) || '').trim();
+        this.aiModelInput.placeholder = AI_PROVIDERS[provider].defaultModel;
+        const defaultLabel = document.getElementById('aiModelDefault');
+        if (defaultLabel) defaultLabel.textContent = `(기본: ${AI_PROVIDERS[provider].defaultModel})`;
     }
 
     // ============== 파일 처리 ==============
@@ -347,7 +372,32 @@ class HTMLLiveEditor {
         reader.readAsText(file, 'UTF-8');
     }
 
+    // 문서에 스크립트가 있으면 기본 차단하고, 실행이 필요한 경우에만 사용자 동의로 허용.
+    // 허용 없이 열면 악성 HTML이 에디터와 same-origin으로 실행되어
+    // localStorage의 AI API 키 등을 읽을 수 있음
+    decideScriptPolicy() {
+        this.allowScripts = false;
+        if (/<script[\s>]/i.test(this.originalHTML)) {
+            this.allowScripts = confirm(
+                '이 문서에는 스크립트(<script>)가 포함되어 있습니다.\n\n' +
+                '신뢰할 수 없는 파일의 스크립트는 브라우저에 저장된 정보(AI API 키 등)에 접근할 수 있습니다.\n\n' +
+                '스크립트를 실행할까요?\n확인 = 실행 허용 / 취소 = 차단 (편집 기능은 그대로 동작)'
+            );
+            if (!this.allowScripts) {
+                this.showToast('보안을 위해 문서 내 스크립트 실행을 차단했습니다.', 'info');
+            }
+        }
+    }
+
+    applySandbox() {
+        const value = this.allowScripts ? 'allow-same-origin allow-scripts' : 'allow-same-origin';
+        if (this.previewFrame.getAttribute('sandbox') !== value) {
+            this.previewFrame.setAttribute('sandbox', value);
+        }
+    }
+
     loadHTMLToEditor() {
+        this.decideScriptPolicy();
         this.uploadScreen.style.display = 'none';
         this.previewFrame.style.display = 'block';
         this.topButtons.style.display = 'flex';
@@ -362,6 +412,7 @@ class HTMLLiveEditor {
 
     renderHTML() {
         const iframe = this.previewFrame;
+        this.applySandbox();
 
         // onload를 src 할당보다 먼저 설정 (역순이면 로드가 먼저 끝나
         // 콜백을 놓치고 미리보기가 빈 화면이 될 수 있음)
@@ -774,6 +825,7 @@ class HTMLLiveEditor {
     showAIModal() {
         this.aiModal.style.display = 'flex';
         this.loadApiKeyForModel(this.aiSettings.model);
+        this.loadModelNameForProvider(this.aiSettings.model);
     }
 
     hideAIModal() {
@@ -838,12 +890,7 @@ class HTMLLiveEditor {
             const iframe = this.previewFrame;
             const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-            let targetHTML;
-            if (scope === 'selected') {
-                targetHTML = this.selectedElement.outerHTML;
-            } else {
-                targetHTML = doc.body.innerHTML;
-            }
+            const targetHTML = this.getAIContextHTML(scope, doc);
 
             const cssResponse = await this.callAIAPI(model, apiKey, prompt, targetHTML);
 
@@ -864,8 +911,43 @@ class HTMLLiveEditor {
         }
     }
 
-    async callAIAPI(model, apiKey, prompt, html) {
-        const systemPrompt = `당신은 웹 디자인 전문가입니다. 사용자가 요청하는 스타일로 HTML 요소의 CSS를 생성해주세요.
+    // AI에 보낼 HTML: 편집용 스팬·에디터 클래스·스크립트를 제거한 원본에 가까운 형태
+    getAIContextHTML(scope, doc) {
+        let root;
+        if (scope === 'selected' && this.selectedElement) {
+            root = this.selectedElement.cloneNode(true);
+        } else {
+            root = doc.body.cloneNode(true);
+        }
+
+        root.querySelectorAll('.editable-text').forEach(span => {
+            span.replaceWith(span.ownerDocument.createTextNode(span.textContent));
+        });
+
+        const editorClasses = this.getEditorClasses();
+        // querySelectorAll은 루트 자신을 포함하지 않으므로 루트도 함께 정리
+        [root, ...root.querySelectorAll('[class]')].forEach(el => {
+            if (!el.classList) return;
+            el.classList.remove(...editorClasses);
+            if (!el.getAttribute('class')) el.removeAttribute('class');
+        });
+
+        root.querySelectorAll('script, #editor-styles').forEach(el => el.remove());
+        root.querySelectorAll('[data-editor-initialized], [data-original]').forEach(el => {
+            el.removeAttribute('data-editor-initialized');
+            el.removeAttribute('data-original');
+        });
+
+        let html = root.outerHTML;
+        const maxLength = 6000;
+        if (html.length > maxLength) {
+            html = html.slice(0, maxLength) + '\n<!-- ...HTML이 길어 이후 내용은 생략됨... -->';
+        }
+        return html;
+    }
+
+    buildAIPrompt(prompt, html) {
+        return `당신은 웹 디자인 전문가입니다. 사용자가 요청하는 스타일로 HTML 요소의 CSS를 생성해주세요.
 
 규칙:
 1. 반드시 유효한 CSS만 응답하세요.
@@ -881,32 +963,38 @@ class HTMLLiveEditor {
 }
 
 현재 HTML:
-${html.substring(0, 3000)}
+${html}
 
 사용자 요청: ${prompt}`;
+    }
 
+    async callAIAPI(provider, apiKey, prompt, html) {
+        const systemPrompt = this.buildAIPrompt(prompt, html);
+        const modelName = this.getAIModelName(provider);
         let response;
+        let data;
 
-        if (model === 'gemini') {
-            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        if (provider === 'gemini') {
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: systemPrompt }] }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 2048
+                        maxOutputTokens: 4096
                     }
                 })
             });
 
-            const data = await response.json();
+            data = await response.json();
             if (data.error) throw new Error(data.error.message);
+            if (!response.ok) throw new Error(`Gemini API 오류 (HTTP ${response.status})`);
 
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
             return this.parseAIResponse(text);
 
-        } else if (model === 'claude') {
+        } else if (provider === 'claude') {
             response = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: {
@@ -916,19 +1004,21 @@ ${html.substring(0, 3000)}
                     'anthropic-dangerous-direct-browser-access': 'true'
                 },
                 body: JSON.stringify({
-                    model: 'claude-3-haiku-20240307',
-                    max_tokens: 2048,
+                    model: modelName,
+                    max_tokens: 4096,
                     messages: [{ role: 'user', content: systemPrompt }]
                 })
             });
 
-            const data = await response.json();
+            data = await response.json();
             if (data.error) throw new Error(data.error.message);
+            if (!response.ok) throw new Error(`Claude API 오류 (HTTP ${response.status})`);
+            if (data.stop_reason === 'refusal') throw new Error('Claude가 이 요청을 거절했습니다. 프롬프트를 바꿔 다시 시도해주세요.');
 
-            const text = data.content?.[0]?.text || '';
+            const text = (data.content || []).filter(block => block.type === 'text').map(block => block.text).join('') || '';
             return this.parseAIResponse(text);
 
-        } else if (model === 'gpt') {
+        } else if (provider === 'gpt') {
             response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -936,18 +1026,19 @@ ${html.substring(0, 3000)}
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
+                    model: modelName,
                     messages: [
                         { role: 'system', content: '당신은 웹 디자인 전문가입니다.' },
                         { role: 'user', content: systemPrompt }
                     ],
                     temperature: 0.7,
-                    max_tokens: 2048
+                    max_tokens: 4096
                 })
             });
 
-            const data = await response.json();
+            data = await response.json();
             if (data.error) throw new Error(data.error.message);
+            if (!response.ok) throw new Error(`OpenAI API 오류 (HTTP ${response.status})`);
 
             const text = data.choices?.[0]?.message?.content || '';
             return this.parseAIResponse(text);
@@ -1341,6 +1432,8 @@ ${html.substring(0, 3000)}
 
     resetAndLoadIframe(iframe, html) {
         return new Promise((resolve, reject) => {
+            this.applySandbox();
+
             iframe.onload = () => {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -3419,6 +3512,14 @@ ${html.substring(0, 3000)}
         if (this.shortcutsModal) this.shortcutsModal.style.display = 'none';
     }
 }
+
+// ============== AI 프로바이더 설정 ==============
+// 기본 모델은 AI 모달의 "모델명" 입력으로 프로바이더별 변경 가능 (localStorage: ai_model_<provider>)
+const AI_PROVIDERS = {
+    gemini: { label: 'Gemini', defaultModel: 'gemini-2.5-flash' },
+    claude: { label: 'Claude', defaultModel: 'claude-opus-5' },
+    gpt: { label: 'GPT', defaultModel: 'gpt-4o-mini' }
+};
 
 // ============== 시작 문서 템플릿 ==============
 const GS_BLANK_HTML = `<!DOCTYPE html>

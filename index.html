@@ -48,8 +48,8 @@
         </div>
     </div>
 
-    <!-- 전체화면 iframe -->
-    <iframe id="previewFrame" class="fullscreen-frame" style="display: none;"></iframe>
+    <!-- 전체화면 iframe (기본적으로 문서 내 스크립트 실행 차단 — 로드 시 사용자 동의로 허용 가능) -->
+    <iframe id="previewFrame" class="fullscreen-frame" sandbox="allow-same-origin" style="display: none;"></iframe>
 
     <!-- 드래그 가이드 라인 -->
     <div class="drag-guide" id="dragGuide" style="display: none;">
@@ -376,7 +376,13 @@
                         <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API 키를 입력하세요">
                         <button class="toggle-visibility" id="toggleApiKey">👁</button>
                     </div>
-                    <small class="api-key-hint">API 키는 브라우저에 저장되며 외부로 전송되지 않습니다.</small>
+                    <small class="api-key-hint">API 키는 이 브라우저(localStorage)에만 저장되며, 스타일 생성 요청 시 선택한 AI 제공사(Google·Anthropic·OpenAI)로만 전송됩니다.</small>
+                </div>
+
+                <div class="ai-section">
+                    <label class="ai-label">모델명</label>
+                    <input type="text" id="aiModelInput" class="api-key-input" placeholder="기본 모델 사용" autocomplete="off">
+                    <small class="api-key-hint">비워두면 기본 모델을 사용합니다. <span id="aiModelDefault"></span></small>
                 </div>
 
                 <!-- 스타일 프롬프트 -->
