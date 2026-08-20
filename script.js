@@ -3394,14 +3394,10 @@ ${html}
     // ============== 시작 화면 옵션 ==============
     bindStartOptions() {
         const blankBtn = document.getElementById('startBlankBtn');
-        const sampleBtn = document.getElementById('startSampleBtn');
         const pickBtn = document.getElementById('startPickBtn');
 
         if (blankBtn) {
             blankBtn.addEventListener('click', () => this.loadFromString(GS_BLANK_HTML, 'untitled.html'));
-        }
-        if (sampleBtn) {
-            sampleBtn.addEventListener('click', () => this.loadFromString(GS_SAMPLE_HTML, 'sample.html'));
         }
         if (pickBtn) {
             // File System Access API 미지원 브라우저에서는 옵션 숨김
@@ -3860,47 +3856,6 @@ const GS_BLANK_HTML = `<!DOCTYPE html>
     <h1>새 문서</h1>
     <p>여기를 클릭해 텍스트를 편집하고, 요소를 선택한 뒤 🎨 스타일 편집 패널에서 자유롭게 꾸며보세요.</p>
 </main>
-</body>
-</html>`;
-
-const GS_SAMPLE_HTML = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>샘플 랜딩 페이지</title>
-<style>
-    * { box-sizing: border-box; margin: 0; }
-    body { font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; color: #1e293b; line-height: 1.6; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid #e2e8f0; }
-    header nav a { margin-left: 20px; color: #475569; text-decoration: none; font-size: 14px; }
-    .hero { text-align: center; padding: 90px 24px; background: linear-gradient(135deg, #eef2ff, #f5f3ff); }
-    .hero h1 { font-size: 42px; letter-spacing: -0.02em; margin-bottom: 14px; }
-    .hero p { color: #64748b; font-size: 18px; margin-bottom: 28px; }
-    .hero button { padding: 13px 30px; font-size: 15px; background: #6366f1; color: #fff; border: none; border-radius: 10px; cursor: pointer; }
-    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; padding: 70px 24px; }
-    .feature { padding: 26px; border: 1px solid #e2e8f0; border-radius: 14px; }
-    .feature h3 { margin-bottom: 8px; font-size: 17px; }
-    .feature p { color: #64748b; font-size: 14px; }
-    footer { text-align: center; padding: 34px; color: #94a3b8; font-size: 13px; border-top: 1px solid #e2e8f0; }
-</style>
-</head>
-<body>
-<header>
-    <strong>🚀 MyProduct</strong>
-    <nav><a href="#">기능</a><a href="#">가격</a><a href="#">문의</a></nav>
-</header>
-<section class="hero">
-    <h1>더 빠르게 만들고, 더 쉽게 편집하세요</h1>
-    <p>HTML Live Editor Pro 샘플 페이지입니다. 요소를 클릭해 편집해보세요.</p>
-    <button>지금 시작하기</button>
-</section>
-<section class="features">
-    <div class="feature"><h3>⚡ 실시간 편집</h3><p>클릭 한 번으로 텍스트와 요소를 바로 수정합니다.</p></div>
-    <div class="feature"><h3>🎨 정밀 스타일</h3><p>폰트·색상·여백·레이아웃을 패널에서 바로 조정합니다.</p></div>
-    <div class="feature"><h3>📥 즉시 저장</h3><p>편집이 끝나면 깨끗한 HTML로 다운로드합니다.</p></div>
-</section>
-<footer>© 2026 MyProduct. All rights reserved.</footer>
 </body>
 </html>`;
 
