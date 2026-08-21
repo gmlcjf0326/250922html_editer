@@ -148,6 +148,7 @@ class HTMLLiveEditor {
         // 스타일 패널 이벤트
         this.stylePanelClose.addEventListener('click', () => this.hideStylePanel());
         this.bindStylePanelEvents();
+        this.bindDocThemePanel();
 
         // AI 모달 이벤트
         this.aiStyleBtn.addEventListener('click', () => this.showAIModal());

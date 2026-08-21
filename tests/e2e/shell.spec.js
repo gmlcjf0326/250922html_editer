@@ -61,7 +61,7 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
       };
     });
     expect(inspector.open).toBe(true);
-    expect(inspector.tabs).toBe(5);
+    expect(inspector.tabs).toBe(6);
     expect(inspector.controls).toBeGreaterThanOrEqual(50);
 
     await page.evaluate(() => {

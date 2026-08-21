@@ -156,6 +156,7 @@
             <button class="sp-tab" data-pane="box" title="크기 · 여백 · 테두리"><span class="gs-ico" data-icon="box" data-icon-size="14"></span> 박스</button>
             <button class="sp-tab" data-pane="fill" title="배경 · 그림자 · 투명도"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 배경</button>
             <button class="sp-tab" data-pane="layout" title="정렬 · Flex · 위치"><span class="gs-ico" data-icon="layout" data-icon-size="14"></span> 배치</button>
+            <button class="sp-tab" data-pane="doc" title="문서 전체에 글꼴 · 팔레트 · 타이포 일괄 적용"><span class="gs-ico" data-icon="file" data-icon-size="14"></span> 문서</button>
         </div>
 
         <div class="style-panel-content">
@@ -764,6 +765,74 @@
                 </div>
             </div>
 
+            <!-- ===================== 문서 ===================== -->
+            <div class="sp-pane" data-pane="doc">
+                <p class="sp-hint"><span class="gs-ico" data-icon="bulb" data-icon-size="14"></span> 여기서 바꾸는 값은 <strong>문서 전체</strong>에 적용되고, 다운로드한 HTML 에도 그대로 남습니다. 선택한 요소 안에만 적용하려면 아래에서 범위를 바꾸세요.</p>
+
+                <div class="style-section">
+                    <label class="style-label">적용 범위</label>
+                    <div class="sp-grid sp-grid-2">
+                        <button class="sp-toggle active" id="spDocScopeAll" data-scope="all">문서 전체</button>
+                        <button class="sp-toggle" id="spDocScopeSel" data-scope="selection">선택 요소 안</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">글꼴 조합</label>
+                    <div class="sp-preset-grid" id="spFontPresets">
+                        <button class="sp-preset" data-font-preset="pretendard">
+                            <span class="sp-preset-name">프리텐다드</span>
+                            <span class="sp-preset-desc">제목 · 본문 모두 Pretendard</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="myeongjo">
+                            <span class="sp-preset-name">명조 제목 + 고딕 본문</span>
+                            <span class="sp-preset-desc">나눔명조 / 나눔고딕</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="noto">
+                            <span class="sp-preset-name">Noto 조합</span>
+                            <span class="sp-preset-desc">Noto Serif KR / Noto Sans KR</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="system">
+                            <span class="sp-preset-name">시스템 글꼴</span>
+                            <span class="sp-preset-desc">웹폰트 없이 — 오프라인 배포용</span>
+                        </button>
+                    </div>
+                    <label class="sp-check">
+                        <input type="checkbox" id="spDocWebfont" checked>
+                        웹폰트 링크 포함 (끄면 방문자 PC 에 설치된 글꼴만 사용)
+                    </label>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">색 팔레트 (그라데이션 없음)</label>
+                    <div class="sp-palette-grid" id="spDocPalettes"></div>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn" id="spFlattenGradients" title="문서 안의 그라데이션 배경을 단색으로 바꿉니다"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 그라데이션 평탄화</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">제안서 타이포 정돈</label>
+                    <div class="sp-check-list">
+                        <label class="sp-check"><input type="checkbox" id="spTypoBody" checked> 본문 16px · 줄간격 1.7</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoHeading" checked> 제목 크기 정리 (32 / 24 / 19px)</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoRhythm" checked> 문단 · 목록 간격 통일</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoMeasure"> 본문 최대 폭 820px 가운데</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoTable" checked> 표 헤더 · 헤어라인 정리</label>
+                    </div>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn primary" id="spApplyTypo"><span class="gs-ico" data-icon="check" data-icon-size="14"></span> 선택한 항목 적용</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">문서 테마 초기화</label>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn danger" id="spResetDocTheme" title="이 탭에서 적용한 문서 테마를 모두 제거합니다"><span class="gs-ico" data-icon="reset" data-icon-size="14"></span> 문서 테마 제거</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -1003,6 +1072,7 @@
     <script src="js/editing.js"></script>
     <script src="js/history.js"></script>
     <script src="js/style-panel.js"></script>
+    <script src="js/doc-theme.js"></script>
     <script src="js/ai.js"></script>
     <script src="js/shell.js"></script>
     <script src="js/main.js"></script>

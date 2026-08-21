@@ -2178,3 +2178,128 @@ body[data-viewport="desktop"] {
 	border-color: var(--gs-success);
 	color: #fff;
 }
+
+/* ============== 문서 탭 (글꼴 · 팔레트 · 타이포 일괄) ============== */
+.sp-preset-grid {
+	display: grid;
+	gap: 5px;
+	margin-top: 6px;
+}
+
+.sp-preset {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 9px 11px;
+	text-align: left;
+	background: var(--gs-surface);
+	border: 1px solid var(--gs-border);
+	border-radius: var(--gs-radius-sm);
+	cursor: pointer;
+	font-family: inherit;
+	transition: border-color var(--gs-transition), background var(--gs-transition);
+}
+
+.sp-preset:hover {
+	border-color: var(--gs-border-strong);
+	background: var(--gs-surface-hover);
+}
+
+.sp-preset.active {
+	border-color: var(--gs-primary);
+	background: var(--gs-primary-soft);
+}
+
+.sp-preset-name {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--gs-text);
+}
+
+.sp-preset-desc {
+	font-size: 11px;
+	color: var(--gs-text-subtle);
+}
+
+.sp-palette-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 5px;
+	margin-top: 6px;
+}
+
+.sp-palette {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding: 8px;
+	background: var(--gs-surface);
+	border: 1px solid var(--gs-border);
+	border-radius: var(--gs-radius-sm);
+	cursor: pointer;
+	font-family: inherit;
+	transition: border-color var(--gs-transition);
+}
+
+.sp-palette:hover { border-color: var(--gs-border-strong); }
+.sp-palette.active { border-color: var(--gs-primary); box-shadow: var(--gs-focus-ring); }
+
+.sp-palette-swatches {
+	display: flex;
+	gap: 3px;
+}
+
+.sp-palette-swatches span {
+	width: 100%;
+	height: 16px;
+	border-radius: var(--gs-radius-xs);
+	border: 1px solid rgba(16, 24, 40, 0.06);
+}
+
+.sp-palette-name {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--gs-text-muted);
+	text-align: left;
+}
+
+.sp-check-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.sp-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 7px;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--gs-text-muted);
+	cursor: pointer;
+}
+
+.sp-check input {
+	margin-top: 2px;
+	accent-color: var(--gs-primary);
+	flex-shrink: 0;
+}
+
+.sp-grid-1 { grid-template-columns: 1fr; }
+
+/* 선택이 없을 때는 요소 대상 탭을 흐리게 둔다 (누르면 문서 탭으로 돌아온다) */
+.style-panel.no-selection .sp-tab:not([data-pane="doc"]) {
+	opacity: 0.4;
+}
+
+[data-theme="dark"] .sp-preset,
+[data-theme="dark"] .sp-palette {
+	background: var(--gs-surface-2);
+	border-color: var(--gs-border-strong);
+}
+
+[data-theme="dark"] .sp-preset.active {
+	background: var(--gs-primary-soft);
+	border-color: var(--gs-primary);
+}

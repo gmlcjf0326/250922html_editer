@@ -15,7 +15,7 @@ test.describe('스타일 인스펙터', () => {
     page.on('dialog', (d) => d.accept());
   });
 
-  test('선택 요소 정보와 5개 탭이 표시된다', async ({ page }) => {
+  test('선택 요소 정보와 6개 탭이 표시된다', async ({ page }) => {
     await openEditor(page, 'inspector.html');
     await selectAndOpenInspector(page, 'h1.title');
 
@@ -32,8 +32,8 @@ test.describe('스타일 인스펙터', () => {
     expect(info.tag).toBe('h1');
     expect(info.path).toContain('.title');
     expect(info.path).toContain('div');
-    expect(info.tabs).toBe(5);
-    expect(info.panes).toBe(5);
+    expect(info.tabs).toBe(6);
+    expect(info.panes).toBe(6);
     expect(info.controls).toBeGreaterThanOrEqual(50);
   });
 

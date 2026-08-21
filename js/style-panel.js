@@ -191,6 +191,12 @@ Object.assign(HTMLLiveEditor.prototype, {
 
     switchStyleTab(name) {
         if (!this.stylePanel || !name) return;
+
+        const hasSelection = !!this.selectedElement || this.selectedElements.length > 0;
+        if (!hasSelection && name !== 'doc') {
+            this.showToast('요소를 먼저 선택하세요. 문서 전체 설정은 "문서" 탭에 있습니다.', 'warning');
+            name = 'doc';
+        }
         this.stylePanel.querySelectorAll('.sp-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.pane === name);
         });
@@ -256,17 +262,35 @@ Object.assign(HTMLLiveEditor.prototype, {
     },
 
     showStylePanel() {
-        if (!this.selectedElement && this.selectedElements.length === 0) {
-            this.showToast('먼저 요소를 선택해주세요.', 'warning');
-            return;
-        }
+        const hasSelection = !!this.selectedElement || this.selectedElements.length > 0;
 
         this.stylePanel.style.display = 'flex';
         this.stylePanelOpen = true;
+
+        // 문서 탭은 선택 없이도 쓸 수 있다 — 선택이 없으면 그 탭으로 연다
+        if (!hasSelection) {
+            this.switchStyleTab('doc');
+            this.setStylePanelSelectionState(false);
+            return;
+        }
+
+        this.setStylePanelSelectionState(true);
         this.loadCurrentStyles();
 
         if (this.selectedElements.length > 1) {
             this.showToast(`${this.selectedElements.length}개 요소에 스타일이 일괄 적용됩니다.`, 'info');
+        }
+    },
+
+    // 선택이 없을 때는 요소 대상 탭을 눌러도 되돌아오도록 표시해 둔다
+    setStylePanelSelectionState(hasSelection) {
+        if (!this.stylePanel) return;
+        this.stylePanel.classList.toggle('no-selection', !hasSelection);
+        const tagEl = document.getElementById('spTargetTag');
+        const pathEl = document.getElementById('spTargetPath');
+        if (!hasSelection && tagEl && pathEl) {
+            tagEl.textContent = '문서';
+            pathEl.textContent = '요소를 선택하면 나머지 탭이 켜집니다';
         }
     },
 
