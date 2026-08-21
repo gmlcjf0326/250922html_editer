@@ -1,7 +1,6 @@
 class HTMLLiveEditor {
     constructor() {
         this.originalHTML = '';
-        this.updateTimeout = null;
         this.selectedElement = null;
         this.isElementMode = true;
 
@@ -20,7 +19,6 @@ class HTMLLiveEditor {
 
         // 스타일 패널 상태
         this.stylePanelOpen = false;
-        this.selectedColorTarget = 'background';
 
         // AI 설정
         this.aiSettings = {
@@ -30,19 +28,13 @@ class HTMLLiveEditor {
 
         // 다중 선택 상태
         this.selectedElements = [];
-        this.isSelectionDragging = false;
-        this.selectionStart = { x: 0, y: 0 };
 
         // 신규 기능 상태
         this.currentFileName = '';
         this.localFilePath = localStorage.getItem('localFilePath') || '';
         this.preferredEditor = localStorage.getItem('preferredEditor') || 'vscode';
         this.fileHandle = null;
-        this.iconCache = new Map();
-        this.iconConfig = { size: 24, stroke: 2, color: '#0f172a' };
-        this.activeAssetTab = 'icon';
         this.commandPaletteVisible = false;
-        this.autosaveTimer = null;
         // 문서 내 스크립트 실행 여부 (기본 차단 — 로드 시 사용자 동의로만 허용)
         this.allowScripts = false;
 
@@ -95,7 +87,6 @@ class HTMLLiveEditor {
 
         // 다중 선택 관련
         this.selectionCount = document.getElementById('selectionCount');
-        this.selectionBox = document.getElementById('selectionBox');
 
         // DOM 네비게이터
         this.domNavigator = document.getElementById('domNavigator');
@@ -3320,11 +3311,9 @@ ${html}
     // ============== 사이드 패널 (템플릿 / 히스토리) ==============
     bindSidePanels() {
         this.historyPanel = document.getElementById('historyPanel');
-        this.assetPanel = document.getElementById('assetPanel');
 
         const historyBtn = document.getElementById('historyBtn');
         const historyClose = document.getElementById('historyPanelClose');
-        const assetClose = document.getElementById('assetPanelClose');
 
         if (historyBtn) {
             historyBtn.addEventListener('click', () => {
@@ -3333,7 +3322,6 @@ ${html}
             });
         }
         if (historyClose) historyClose.addEventListener('click', () => this.historyPanel.classList.remove('open'));
-        if (assetClose) assetClose.addEventListener('click', () => this.assetPanel.classList.remove('open'));
     }
 
     toggleSidePanel(panel) {
@@ -3344,7 +3332,7 @@ ${html}
     }
 
     closeSidePanels() {
-        [this.historyPanel, this.assetPanel].forEach(panel => {
+        [this.historyPanel].forEach(panel => {
             if (panel) panel.classList.remove('open');
         });
     }

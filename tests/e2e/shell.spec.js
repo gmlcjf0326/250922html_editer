@@ -154,6 +154,38 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
     expect(full.width).toBeGreaterThan(1000);
   });
 
+  test('뷰포트 막대는 아래 iframe 콘텐츠의 클릭을 가로채지 않는다', async ({ page }) => {
+    await openEditor(page, 'demo.html');
+
+    // 막대의 실제 좌표를 재서, 버튼이 아닌 막대 여백 위에 편집 대상이 오도록 맞춘다
+    const point = await page.evaluate(() => {
+      const bar = document.getElementById('viewportSwitcher').getBoundingClientRect();
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const target = doc.querySelector('.hero h1');
+      target.style.position = 'fixed';
+      target.style.margin = '0';
+      target.style.left = Math.round(bar.left) + 'px';
+      target.style.top = Math.round(bar.top) + 'px';
+      target.style.width = Math.round(bar.width) + 'px';
+      target.style.height = Math.round(bar.height) + 'px';
+      // 막대 안쪽이지만 버튼이 시작되기 전인 왼쪽 패딩 지점
+      return { x: Math.round(bar.left) + 2, y: Math.round(bar.top) + 2, bottom: Math.round(bar.bottom) };
+    });
+
+    // 클릭 지점이 막대의 경계 안(기하학적으로)인지 확인한다.
+    // hit-test 로 확인하면 안 되는데, 수정 자체가 막대를 hit-test 에서 투명하게 만들기 때문이다.
+    const inside = await page.evaluate(({ x, y }) => {
+      const bar = document.getElementById('viewportSwitcher').getBoundingClientRect();
+      return x >= bar.left && x <= bar.right && y >= bar.top && y <= bar.bottom;
+    }, point);
+    expect(inside).toBe(true);
+
+    await page.mouse.click(point.x, point.y);
+    await expect
+      .poll(() => page.evaluate(() => (window.htmlEditor.selectedElement || {}).tagName))
+      .toBe('H1');
+  });
+
   test('단축키 가이드와 외부 에디터 경로 설정이 동작한다', async ({ page }) => {
     await openEditor(page, 'demo.html');
 

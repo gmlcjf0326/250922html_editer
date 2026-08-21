@@ -37,10 +37,6 @@
                 </button>
             </div>
 
-            <div class="recent-files" id="recentFiles" style="display:none;">
-                <h4>최근 파일</h4>
-                <div id="recentFilesList"></div>
-            </div>
         </div>
     </div>
 
@@ -68,8 +64,6 @@
         <!-- 오른쪽 버튼들 -->
         <div class="action-buttons">
             <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)">⌘</button>
-            <!-- 에셋 팔레트: Phase 2에서 구현 예정 (아이콘·이미지·그라디언트) -->
-            <button id="assetsBtn" class="gs-toolbar-btn" title="에셋 팔레트 (준비 중)" style="display:none;">🎨 에셋</button>
             <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인">🕐</button>
 
             <span class="gs-divider"></span>
@@ -93,11 +87,6 @@
                     <div class="gs-dropdown-item" data-editor="webstorm">
                         <span>🟣</span> WebStorm / JetBrains
                     </div>
-                    <!-- Monaco 내장 에디터: Phase 2에서 구현 예정 -->
-                    <div class="gs-dropdown-item" data-editor="monaco" style="display:none;">
-                        <span>🧠</span> 브라우저 내장 Monaco
-                    </div>
-                    <div class="gs-dropdown-divider"></div>
                     <div class="gs-dropdown-item" data-editor="set-path">
                         <span>📁</span> 로컬 경로 설정…
                     </div>
@@ -136,14 +125,6 @@
         </button>
     </div>
 
-    <!-- 자동 저장 복구 배너 -->
-    <div class="autosave-banner" id="autosaveBanner" style="display: none;">
-        <span>⏱</span>
-        <span><strong>자동 저장본</strong>이 발견됐습니다. <span id="autosaveTime"></span></span>
-        <button class="gs-toolbar-btn primary" id="autosaveRestoreBtn">복구</button>
-        <button class="gs-toolbar-btn" id="autosaveDismissBtn">무시</button>
-    </div>
-
     <!-- DOM 네비게이터 (브레드크럼) -->
     <div class="dom-navigator" id="domNavigator" style="display: none;">
         <div class="dom-breadcrumb" id="domBreadcrumb"></div>
@@ -154,9 +135,6 @@
             <button class="dom-nav-btn" id="navFirstChild" title="첫 자식 요소 (C)">↓ 자식</button>
         </div>
     </div>
-
-    <!-- 다중 선택 영역 박스 -->
-    <div class="selection-box" id="selectionBox" style="display: none;"></div>
 
     <!-- 스타일 인스펙터 패널 -->
     <div class="style-panel" id="stylePanel" style="display: none;">
@@ -935,41 +913,6 @@
         <div class="similar-option" data-scope="descendants-same-tag">하위 동일 태그 <span class="count" id="similarCountDesc">0</span></div>
     </div>
 
-    <!-- 에셋 팔레트 -->
-    <div class="asset-panel" id="assetPanel">
-        <div class="asset-panel-header">
-            <h3>🎨 에셋 라이브러리</h3>
-            <button class="gs-icon-btn" id="assetPanelClose" title="닫기">×</button>
-        </div>
-        <div class="asset-tabs">
-            <button class="asset-tab active" data-asset="icon">아이콘</button>
-            <button class="asset-tab" data-asset="image">이미지</button>
-            <button class="asset-tab" data-asset="gradient">그라디언트</button>
-            <button class="asset-tab" data-asset="color">색상</button>
-        </div>
-        <div class="asset-body" id="assetBody">
-            <!-- 아이콘 탭 기본 -->
-            <div class="asset-search-row" id="assetIconSearchRow">
-                <input type="text" id="iconSearch" placeholder="🔍 아이콘 검색 (예: check, heart, arrow)...">
-            </div>
-            <div class="icon-grid" id="iconGrid"></div>
-            <div class="icon-controls" id="iconControls" style="display:none;">
-                <div>
-                    <label>크기 <span class="value-chip" id="iconSizeValue">24px</span></label>
-                    <input type="range" id="iconSize" min="12" max="96" value="24">
-                </div>
-                <div>
-                    <label>두께 <span class="value-chip" id="iconStrokeValue">2</span></label>
-                    <input type="range" id="iconStroke" min="1" max="3" step="0.5" value="2">
-                </div>
-                <div style="grid-column: span 2;">
-                    <label>색상</label>
-                    <input type="color" id="iconColor" value="#0f172a" style="width:100%; height:32px; border:none; border-radius:6px; background:transparent;">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 히스토리 타임라인 패널 -->
     <div class="history-panel" id="historyPanel">
         <div class="history-panel-header">
@@ -1023,23 +966,6 @@
                     <div class="shortcut-row"><span>자식으로</span><div class="keys"><span class="key">C</span></div></div>
                     <div class="shortcut-row"><span>형제 이전/다음</span><div class="keys"><span class="key">←</span> / <span class="key">→</span></div></div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Monaco 에디터 모달 -->
-    <div class="modal-overlay monaco-modal" id="monacoModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🧠 Monaco 원본 편집기</h2>
-                <div style="display:flex; gap:8px;">
-                    <button class="gs-toolbar-btn" id="monacoReloadBtn" title="iframe 새로고침">↻ 미리보기</button>
-                    <button class="gs-toolbar-btn primary" id="monacoSaveBtn" title="저장 (Ctrl+S)">💾 저장</button>
-                    <button class="gs-icon-btn" id="monacoModalClose">×</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div id="monacoEditorHost"></div>
             </div>
         </div>
     </div>
