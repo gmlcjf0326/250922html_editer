@@ -20,7 +20,7 @@ test.describe('스타일 인스펙터', () => {
     await selectAndOpenInspector(page, 'h1.title');
 
     const info = await page.evaluate(() => ({
-      open: document.getElementById('stylePanel').style.display === 'block',
+      open: document.getElementById('stylePanel').style.display !== 'none',
       tag: document.getElementById('spTargetTag').textContent,
       path: document.getElementById('spTargetPath').textContent,
       tabs: document.querySelectorAll('.sp-tab').length,

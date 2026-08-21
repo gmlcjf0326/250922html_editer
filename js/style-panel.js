@@ -261,7 +261,7 @@ Object.assign(HTMLLiveEditor.prototype, {
             return;
         }
 
-        this.stylePanel.style.display = 'block';
+        this.stylePanel.style.display = 'flex';
         this.stylePanelOpen = true;
         this.loadCurrentStyles();
 

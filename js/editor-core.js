@@ -306,27 +306,31 @@ class HTMLLiveEditor {
 
         const style = doc.createElement('style');
         style.id = 'editor-styles';
+        // 편집 대상 문서 안이라 부모의 CSS 변수가 닿지 않는다 — A안 값을 그대로 쓴다
         style.textContent = `
             .element-selected {
-                outline: 2px solid #007bff !important;
+                outline: 2px solid #2563eb !important;
                 outline-offset: 2px;
+                border-radius: 3px;
             }
             .element-hover {
-                outline: 1px dashed #007bff !important;
-                outline-offset: 1px;
+                outline: 1px solid rgba(37, 99, 235, 0.4) !important;
+                outline-offset: 2px;
+                border-radius: 3px;
             }
             .element-multi-selected {
-                outline: 2px solid #6366f1 !important;
-                outline-offset: 1px;
-                background-color: rgba(99, 102, 241, 0.08) !important;
+                outline: 2px solid #2563eb !important;
+                outline-offset: 2px;
+                border-radius: 3px;
+                background-color: rgba(37, 99, 235, 0.05) !important;
             }
             .element-dragging {
                 opacity: 0.5 !important;
-                outline: 2px dashed #007bff !important;
+                outline: 2px dashed #2563eb !important;
             }
             .drop-target-highlight {
-                background: rgba(0, 123, 255, 0.1) !important;
-                outline: 2px dashed #007bff !important;
+                background: rgba(37, 99, 235, 0.05) !important;
+                outline: 2px dashed #2563eb !important;
             }
             .drop-indicator-before::before {
                 content: '';
@@ -334,8 +338,8 @@ class HTMLLiveEditor {
                 top: 0;
                 left: 0;
                 right: 0;
-                height: 4px;
-                background: linear-gradient(90deg, #007bff, #00d4ff);
+                height: 3px;
+                background: #2563eb;
                 border-radius: 2px;
                 z-index: 10000;
             }
@@ -345,8 +349,8 @@ class HTMLLiveEditor {
                 bottom: 0;
                 left: 0;
                 right: 0;
-                height: 4px;
-                background: linear-gradient(90deg, #007bff, #00d4ff);
+                height: 3px;
+                background: #2563eb;
                 border-radius: 2px;
                 z-index: 10000;
             }
@@ -354,20 +358,20 @@ class HTMLLiveEditor {
                 position: relative;
                 padding: 2px 4px;
                 border-radius: 3px;
-                transition: all 0.2s ease;
+                transition: background-color 160ms ease, outline-color 160ms ease;
                 cursor: text;
                 min-height: 1em;
                 display: inline-block;
                 min-width: 10px;
             }
             .editable-text:hover {
-                background-color: rgba(102, 126, 234, 0.1);
-                outline: 1px dashed rgba(102, 126, 234, 0.3);
+                background-color: rgba(37, 99, 235, 0.05);
+                outline: 1px solid rgba(37, 99, 235, 0.2);
             }
             .editable-text:focus {
-                background-color: rgba(102, 126, 234, 0.15);
-                outline: 2px solid rgba(102, 126, 234, 0.5);
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                background-color: rgba(37, 99, 235, 0.05);
+                outline: 2px solid #2563eb;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
             }
         `;
         doc.head.appendChild(style);

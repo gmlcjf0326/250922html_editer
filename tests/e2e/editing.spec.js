@@ -173,7 +173,7 @@ test.describe('편집 동작 (선택 · 구조 · 히스토리)', () => {
       editor.showStylePanel();
     });
 
-    expect(await page.evaluate(() => document.getElementById('stylePanel').style.display)).toBe('block');
+    expect(await page.evaluate(() => document.getElementById('stylePanel').style.display)).not.toBe('none');
     expect(await inlineStyle(page, 'li', 'color')).toBe('');
   });
 });

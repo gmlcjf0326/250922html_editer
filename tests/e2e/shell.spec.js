@@ -55,7 +55,7 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
       window.htmlEditor.selectElement(doc.querySelector('h1'));
       window.htmlEditor.showStylePanel();
       return {
-        open: document.getElementById('stylePanel').style.display === 'block',
+        open: document.getElementById('stylePanel').style.display !== 'none',
         tabs: document.querySelectorAll('.sp-tab').length,
         controls: document.querySelectorAll('#stylePanel [data-css]').length,
       };
