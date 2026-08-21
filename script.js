@@ -595,6 +595,9 @@ class HTMLLiveEditor {
 
     // iframe에 에디터 스타일 주입
     injectEditorStyles(doc) {
+        // 히스토리 스냅샷에는 이 스타일 노드가 이미 포함되어 있다
+        if (doc.getElementById('editor-styles')) return;
+
         const style = doc.createElement('style');
         style.id = 'editor-styles';
         style.textContent = `
@@ -1441,6 +1444,12 @@ ${html}
                         return NodeFilter.FILTER_REJECT;
                     }
 
+                    // 이미 편집용 스팬 안에 있는 텍스트는 다시 감싸지 않는다
+                    // (되돌리기마다 스팬이 한 겹씩 중첩되던 문제 방지)
+                    if (parent.closest && parent.closest('.editable-text')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
                     const text = node.textContent.trim();
                     if (text.length === 0) {
                         return NodeFilter.FILTER_REJECT;
@@ -1639,27 +1648,46 @@ ${html}
     }
 
     async restoreFromHistory() {
-        if (this.historyIndex >= 0 && this.historyIndex < this.history.length) {
-            const snapshot = this.history[this.historyIndex];
-            const iframe = this.previewFrame;
+        if (this.historyIndex < 0 || this.historyIndex >= this.history.length) return;
 
-            try {
-                this.clearAllDOMReferences();
+        const snapshot = this.history[this.historyIndex];
+        const doc = this.getPreviewDoc();
+        if (!doc || !doc.documentElement) return;
 
-                const doc = await this.resetAndLoadIframe(iframe, snapshot.html);
+        try {
+            // 스크롤 위치는 교체 전에 저장해 두었다가 복원한다
+            const scroller = doc.scrollingElement || doc.documentElement;
+            const scrollTop = scroller.scrollTop;
+            const scrollLeft = scroller.scrollLeft;
 
-                await this.setupAllEventListeners(doc);
+            this.clearAllDOMReferences();
 
-                await this.restoreToolbarWithRetry(doc, snapshot.selectedElementSelector);
+            // iframe 을 다시 로드하지 않고 <html> 만 교체한다.
+            // 문서의 doctype 이 그대로 유지되므로 standards mode 도 보존된다.
+            const parsed = new DOMParser().parseFromString(snapshot.html, 'text/html');
+            doc.replaceChild(doc.importNode(parsed.documentElement, true), doc.documentElement);
 
-                this.hideContextualMenus();
-                this.updateHistoryButtons();
+            // 스냅샷에는 이미 편집용 스팬과 에디터 스타일이 들어 있으므로
+            // 다시 감싸지 않고(중첩 방지) 리스너만 새로 연결한다.
+            this.injectEditorStyles(doc);
+            this.setupEditableListeners(doc);
+            this.setupElementSelection(doc);
+            this.setupDragAndDrop(doc);
 
-            } catch (error) {
-                console.error('히스토리 복원 실패:', error);
-                this.updateHistoryButtons();
+            scroller.scrollTop = scrollTop;
+            scroller.scrollLeft = scrollLeft;
+
+            const restored = this.findElementBySelector(doc, snapshot.selectedElementSelector);
+            if (restored) {
+                this.selectElement(restored);
             }
+
+            this.hideContextualMenus();
+        } catch (error) {
+            console.error('히스토리 복원 실패:', error);
         }
+
+        this.updateHistoryButtons();
     }
 
     clearAllDOMReferences() {
@@ -1677,91 +1705,6 @@ ${html}
         this.hideStylePanel();
     }
 
-    resetAndLoadIframe(iframe, html) {
-        return new Promise((resolve, reject) => {
-            this.applySandbox();
-
-            iframe.onload = () => {
-                try {
-                    const doc = iframe.contentDocument || iframe.contentWindow.document;
-
-                    doc.open();
-                    doc.write(html);
-                    doc.close();
-
-                    this.waitForDocumentReady(doc, () => {
-                        iframe.onload = null;
-                        resolve(doc);
-                    });
-                } catch (error) {
-                    iframe.onload = null;
-                    reject(error);
-                }
-            };
-
-            iframe.src = 'about:blank';
-
-            setTimeout(() => {
-                iframe.onload = null;
-                reject(new Error('iframe 로드 타임아웃'));
-            }, 5000);
-        });
-    }
-
-    setupAllEventListeners(doc) {
-        return new Promise((resolve) => {
-            try {
-                this.injectEditorStyles(doc);
-                this.makeTextEditable(doc);
-                this.setupEditableListeners(doc);
-                this.setupElementSelection(doc);
-                this.setupDragAndDrop(doc);
-
-                setTimeout(() => resolve(), 100);
-            } catch (error) {
-                console.error('이벤트 리스너 설정 오류:', error);
-                resolve();
-            }
-        });
-    }
-
-    restoreToolbarWithRetry(doc, originalSelector) {
-        return new Promise((resolve) => {
-            let attempts = 0;
-            const maxAttempts = 3;
-
-            const attemptRestore = () => {
-                attempts++;
-
-                const success = this.attemptToolbarRestore(doc, originalSelector);
-
-                if (success || attempts >= maxAttempts) {
-                    resolve();
-                } else {
-                    setTimeout(attemptRestore, 500);
-                }
-            };
-
-            setTimeout(attemptRestore, 300);
-        });
-    }
-
-    attemptToolbarRestore(doc, originalSelector) {
-        let selectedElement = this.findElementBySelector(doc, originalSelector);
-        if (selectedElement) {
-            this.selectElement(selectedElement);
-            return true;
-        }
-
-        selectedElement = this.findFirstVisibleElement(doc);
-        if (selectedElement) {
-            this.selectElement(selectedElement);
-            return true;
-        }
-
-        return false;
-    }
-
     findElementBySelector(doc, selector) {
         if (!selector) return null;
 
@@ -1771,17 +1714,6 @@ ${html}
                 return element;
             }
         } catch (e) {}
-        return null;
-    }
-
-    findFirstVisibleElement(doc) {
-        const candidates = doc.querySelectorAll('button, h1, h2, h3, p, li, a, div, span');
-
-        for (let element of candidates) {
-            if (this.isElementVisible(element) && element.textContent.trim()) {
-                return element;
-            }
-        }
         return null;
     }
 
@@ -1946,9 +1878,7 @@ ${html}
                 });
             }
 
-            const markedElements = doc.querySelectorAll('[data-editor-initialized]');
-            markedElements.forEach(element => {
-                element.removeAttribute('data-editor-initialized');
+            doc.querySelectorAll('.element-hover, .element-selected').forEach(element => {
                 element.classList.remove('element-hover', 'element-selected');
             });
 
@@ -3023,7 +2953,6 @@ ${html}
             this.makeElementEditable(newElement);
         }
 
-        this.setupElementEventListeners(newElement);
         this.selectElement(newElement);
         this.saveToHistory(`${tagName} 요소 추가`, true);
     }
@@ -3039,47 +2968,6 @@ ${html}
         }
     }
 
-    setupElementEventListeners(element) {
-        if (!element || element.hasAttribute('data-editor-initialized')) return;
-
-        element.setAttribute('data-editor-initialized', 'true');
-
-        element.addEventListener('mouseenter', (e) => {
-            if (this.isElementMode && !this.selectedElement && !this.isDragging) {
-                e.stopPropagation();
-                element.classList.add('element-hover');
-            }
-        });
-
-        element.addEventListener('mouseleave', (e) => {
-            if (this.isElementMode) {
-                e.stopPropagation();
-                element.classList.remove('element-hover');
-            }
-        });
-
-        element.addEventListener('click', (e) => {
-            if (this.isElementMode && !this.isDragging) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.selectElement(element);
-            }
-        });
-
-        element.addEventListener('contextmenu', (e) => {
-            if (this.isElementMode) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (this.isTableElement(element)) {
-                    this.showTableContextMenu(e, element);
-                } else {
-                    this.showContextMenu(e, element);
-                }
-            }
-        });
-    }
-
     duplicateElement() {
         const targets = this.getBatchTargets();
         if (targets.length === 0) return;
@@ -3091,10 +2979,8 @@ ${html}
             const clone = element.cloneNode(true);
             element.parentNode.insertBefore(clone, element.nextSibling);
 
-            clone.removeAttribute('data-editor-initialized');
             clone.classList.remove('element-selected', 'element-multi-selected');
             clone.querySelectorAll('*').forEach(child => {
-                child.removeAttribute('data-editor-initialized');
                 child.classList.remove('element-selected', 'element-multi-selected');
             });
             // 클론에는 이벤트 리스너가 복사되지 않으므로 텍스트 편집 바인딩 재적용
@@ -3179,7 +3065,6 @@ ${html}
             const newCell = document.createElement(targetRow.cells[i].tagName.toLowerCase());
             newCell.textContent = '새 셀';
             this.makeElementEditable(newCell);
-            this.setupElementEventListeners(newCell);
             newRow.appendChild(newCell);
         }
 
@@ -3208,7 +3093,6 @@ ${html}
             const newCell = document.createElement(row.cells[cellIndex] ? row.cells[cellIndex].tagName.toLowerCase() : 'td');
             newCell.textContent = '새 셀';
             this.makeElementEditable(newCell);
-            this.setupElementEventListeners(newCell);
 
             if (insertIndex >= row.cells.length) {
                 row.appendChild(newCell);

@@ -47,7 +47,7 @@ PR #3(`3992b8f`)에서 새 UI 셸(HTML/CSS)과 생성자 초기화 코드만 머
 | 15 | AI 모델명 구식·하드코딩: `gemini-1.5-flash`, `claude-3-haiku-20240307`, `gpt-3.5-turbo`. HTML 컨텍스트도 3,000자에서 단순 절단 | `script.js:860-915` |
 | 16 | undo/redo마다 iframe 전체 재로드(`doc.write`) → 느리고 스크롤 위치 소실. 복원 실패 시 `findFirstVisibleElement`가 **임의의 첫 요소를 자동 선택**하는 의외의 동작 | `script.js:1279-1432` |
 | 17 | 히스토리가 전체 문서 outerHTML 스냅샷 20개 — 큰 문서에서 메모리 낭비 | `script.js:1145-1171` |
-| 18 | body 캡처 위임과 요소별 개별 리스너(`setupElementEventListeners`)가 공존 → 추가/복제된 요소는 클릭 핸들러가 중복 실행 | `script.js:1522-1586` vs `script.js:2203-2242` |
+| 18 | body 캡처 위임과 요소별 개별 리스너(`setupElementEventListeners`)가 공존 | `script.js:1522-1586` vs `script.js:2203-2242` — ※ 2026-08-21 재확인: 위임 핸들러가 캡처 단계에서 `stopPropagation()` 하므로 요소별 리스너는 **실행되지 않는 죽은 코드**였음. "중복 실행"이라던 최초 진단은 부정확 |
 | 19 | `style.css`에 `.element-multi-selected`가 서로 다른 색으로 2회 정의(1164행, 2235행), 사용처 없는 상태 필드 다수(`fileHandle`, `autosaveTimer`, `iconCache` 등) | `style.css`, `script.js:37-46` |
 | 20 | 구조적 부채: 단일 클래스 2,490줄, 모듈 분리·테스트·린트·CI 전무. README가 신규 UI를 전혀 반영하지 못함 | 저장소 전체 |
 
