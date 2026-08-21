@@ -190,4 +190,37 @@ test.describe('문서 스타일 일괄 적용', () => {
         !!document.getElementById('previewFrame').contentDocument.getElementById('doc-theme')))
       .toBe(true);
   });
+  test('되돌리기 후 패널 상태가 실제 문서를 따라간다', async ({ page }) => {
+    await openEditor(page, 'doc.html');
+    await openDocTab(page);
+    await page.click('[data-font-preset="noto"]');
+    await page.click('[data-palette="forest"]');
+
+    await page.evaluate(() => window.htmlEditor.undo());   // 팔레트 취소
+    await expect
+      .poll(() => page.evaluate(() => ({
+        palette: document.querySelector('[data-palette="forest"]').classList.contains('active'),
+        font: document.querySelector('[data-font-preset="noto"]').classList.contains('active'),
+        state: window.htmlEditor.docTheme.palette,
+      })))
+      .toEqual({ palette: false, font: true, state: null });
+
+    await page.evaluate(() => window.htmlEditor.undo());   // 글꼴까지 취소
+    await expect
+      .poll(() => page.evaluate(() => ({
+        font: document.querySelector('[data-font-preset="noto"]').classList.contains('active'),
+        state: window.htmlEditor.docTheme.font,
+        inDoc: !!document.getElementById('previewFrame').contentDocument.getElementById('doc-theme'),
+      })))
+      .toEqual({ font: false, state: null, inDoc: false });
+  });
+
+  test('자체 배경이 없는 문서도 다크 테마에서 종이 바탕 위에 놓인다', async ({ page }) => {
+    await openEditor(page, 'doc.html');
+    await page.evaluate(() => window.htmlEditor.applyTheme('dark'));
+
+    const frameBg = await page.evaluate(() =>
+      getComputedStyle(document.getElementById('previewFrame')).backgroundColor);
+    expect(frameBg).toBe('rgb(255, 255, 255)');
+  });
 });

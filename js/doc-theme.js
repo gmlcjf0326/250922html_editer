@@ -186,6 +186,33 @@ Object.assign(HTMLLiveEditor.prototype, {
 
     // ---------- 문서에 쓰기 ----------
 
+    // 되돌리기/다시실행으로 문서가 통째로 교체되면 패널이 들고 있던 상태가 문서와 어긋난다.
+    // (하이라이트가 남는 것도 문제지만, 그 상태로 다른 값을 건드리면 되돌린 설정이 되살아난다)
+    // 그래서 문서에 실제로 남아 있는 doc-theme 을 기준으로 다시 맞춘다.
+    syncDocThemeFromDocument() {
+        if (!this.docTheme) return;
+
+        const doc = this.getPreviewDoc();
+        const node = doc ? this.getDocThemeNode(doc, false) : null;
+        const css = node ? node.textContent : '';
+
+        if (!css) {
+            this.docTheme.font = null;
+            this.docTheme.palette = null;
+            this.docTheme.typo = null;
+        } else {
+            const fontKey = Object.keys(DOC_FONT_PRESETS)
+                .find(key => css.includes(DOC_FONT_PRESETS[key].body)) || null;
+            const paletteKey = Object.keys(DOC_PALETTES)
+                .find(key => css.includes(`--doc-accent: ${DOC_PALETTES[key].accent}`)) || null;
+            this.docTheme.font = fontKey;
+            this.docTheme.palette = paletteKey;
+        }
+
+        this.markDocPresetActive('[data-font-preset]', 'fontPreset', this.docTheme.font);
+        this.markDocPresetActive('[data-palette]', 'palette', this.docTheme.palette);
+    },
+
     getDocThemeNode(doc, create = true) {
         let node = doc.getElementById(DOC_THEME_ID);
         if (!node && create) {

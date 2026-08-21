@@ -181,6 +181,9 @@ Object.assign(HTMLLiveEditor.prototype, {
                 this.selectElement(restored);
             }
 
+            // 문서가 통째로 교체됐으므로 문서 탭이 들고 있던 상태를 실제 문서 기준으로 다시 맞춘다
+            this.syncDocThemeFromDocument();
+
             this.hideContextualMenus();
         } catch (error) {
             console.error('히스토리 복원 실패:', error);
