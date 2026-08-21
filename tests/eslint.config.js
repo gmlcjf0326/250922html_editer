@@ -15,7 +15,7 @@ module.exports = [
       },
     },
     rules: {
-      'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none' }],
+      'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', varsIgnorePattern: '^HTMLLiveEditor$' }],
       'no-undef': 'error',
       'no-empty': ['warn', { allowEmptyCatch: true }],
     },

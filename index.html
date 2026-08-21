@@ -995,6 +995,15 @@
     <!-- 토스트 메시지 -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="script.js"></script>
+    <!-- 로드 순서 주의: editor-core.js 가 클래스를 선언하고 나머지가 prototype 을 확장한다 -->
+    <script src="js/editor-core.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/selection.js"></script>
+    <script src="js/editing.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/style-panel.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

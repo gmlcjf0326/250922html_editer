@@ -97,10 +97,44 @@
 
 ## 🛠️ 기술 스택
 
-- **HTML5**: 구조 및 마크업
-- **CSS3**: 스타일링 및 애니메이션
-- **Vanilla JavaScript**: 기능 구현
-- **Iframe**: 안전한 HTML 렌더링
+- **HTML5 / CSS3 / Vanilla JavaScript** — 빌드 도구·프레임워크 없이 동작
+- **Iframe + sandbox** — 편집 대상 문서를 격리해 렌더링
+
+## 📁 파일 구조
+
+빌드 단계가 없어서 `index.html` 을 브라우저에서 바로 열면 그대로 실행됩니다.
+
+```
+index.html          UI 마크업
+style.css           에디터 UI 스타일 (디자인 토큰 · 다크 모드 포함)
+js/
+  editor-core.js    HTMLLiveEditor 클래스 선언, 파일 로드·샌드박스·텍스트 편집·다운로드
+  utils.js          색 변환, 토스트, 문서 직렬화 등 공용 helper
+  selection.js      이벤트 위임, 단일·다중·유사 선택, DOM 네비게이터, 컨텍스트 메뉴
+  editing.js        드래그 앤 드롭, 구조 변경, 요소 추가·복제·삭제, 테이블
+  history.js        스냅샷 저장, 되돌리기/다시실행(제자리 복원), 히스토리 패널
+  style-panel.js    스타일 인스펙터 (data-css 선언적 바인딩)
+  ai.js             AI 스타일 변환 (Gemini · Claude · GPT)
+  shell.js          테마, 명령 팔레트, 뷰포트, 외부 에디터 연동, 모달, 단축키
+  main.js           부트스트랩
+tests/              Playwright E2E 스위트 + ESLint 설정
+```
+
+`editor-core.js` 가 클래스를 선언하고 나머지 파일이 `Object.assign(HTMLLiveEditor.prototype, {...})`
+로 기능을 덧붙입니다. 그래서 `index.html` 의 `<script>` **로드 순서**가 중요합니다.
+
+## 🧪 개발 · 테스트
+
+```bash
+cd tests
+npm ci
+npx playwright install chromium   # 최초 1회
+npm test                          # E2E 49케이스
+npm run lint                      # ESLint
+```
+
+이미 받아둔 Chromium 을 재사용하려면 `CHROMIUM_PATH=/path/to/chrome npm test` 로 실행합니다.
+푸시·PR 마다 GitHub Actions 가 같은 검사를 자동으로 돌립니다.
 
 ## 📋 시스템 요구사항
 
