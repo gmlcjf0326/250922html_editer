@@ -142,14 +142,24 @@ test.describe('스타일 인스펙터', () => {
     await page.click('#applyBorder');
     expect(await inlineStyle(page, 'h1.title', 'border')).toContain('dashed');
 
-    // 한쪽 면만 적용하면 축약 속성은 비고 해당 면만 남는다
+    // 한쪽 면만 적용하면 그 면에만 테두리가 남는다.
+    // 인라인 축약(style.borderTop)의 직렬화는 크로뮴 버전에 따라 달라지므로
+    // (신버전은 border-width/style/color 삼각형으로 다시 직렬화해 축약이 빈 문자열이 된다)
+    // 실제로 그려지는 값(computed)으로 확인한다.
     await page.click('[data-border-side="borderBottom"]');
     const sides = await page.evaluate(() => {
-      const s = document.getElementById('previewFrame').contentDocument.querySelector('h1.title').style;
-      return { bottom: s.borderBottom, top: s.borderTop };
+      const el = document.getElementById('previewFrame').contentDocument.querySelector('h1.title');
+      const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+      return {
+        bottomStyle: cs.borderBottomStyle,
+        bottomWidth: cs.borderBottomWidth,
+        topStyle: cs.borderTopStyle,
+        topWidth: cs.borderTopWidth,
+      };
     });
-    expect(sides.bottom).toContain('dashed');
-    expect(sides.top).toBe('none');
+    expect(sides).toEqual({
+      bottomStyle: 'dashed', bottomWidth: '3px', topStyle: 'none', topWidth: '0px',
+    });
 
     await setControl(page, '#spRadiusNum', '16');
     expect(await inlineStyle(page, 'h1.title', 'borderRadius')).toBe('16px');
