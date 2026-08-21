@@ -11,11 +11,13 @@ module.exports = [
         setTimeout: 'readonly', clearTimeout: 'readonly', confirm: 'readonly',
         alert: 'readonly', Blob: 'readonly', URL: 'readonly', FileReader: 'readonly',
         NodeFilter: 'readonly', DOMParser: 'readonly', WeakSet: 'readonly',
-        Event: 'readonly', HTMLLiveEditor: 'writable',
+        Event: 'readonly',
+        // 클래식 스크립트라 파일 간에 전역으로 공유된다 (index.html 의 로드 순서 참고)
+        HTMLLiveEditor: 'writable', GS_ICONS: 'writable', gsIcon: 'writable', hydrateIcons: 'writable',
       },
     },
     rules: {
-      'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', varsIgnorePattern: '^HTMLLiveEditor$' }],
+      'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', varsIgnorePattern: '^(HTMLLiveEditor|GS_ICONS|gsIcon|hydrateIcons)$' }],
       'no-undef': 'error',
       'no-empty': ['warn', { allowEmptyCatch: true }],
     },

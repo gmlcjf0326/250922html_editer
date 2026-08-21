@@ -26,13 +26,13 @@ Object.assign(HTMLLiveEditor.prototype, {
         toast.className = `toast ${type}`;
 
         const icon = {
-            success: '✅',
-            error: '❌',
-            warning: '⚠️',
-            info: 'ℹ️'
-        }[type] || 'ℹ️';
+            success: 'check',
+            error: 'x',
+            warning: 'warning',
+            info: 'info'
+        }[type] || 'info';
 
-        toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        toast.innerHTML = `<span class="toast-icon">${gsIcon(icon, 16)}</span><span>${message}</span>`;
         this.toastContainer.appendChild(toast);
 
         setTimeout(() => {

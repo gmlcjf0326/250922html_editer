@@ -19,7 +19,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         localStorage.setItem('editorTheme', theme);
 
         if (this.themeToggleBtn) {
-            this.themeToggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            this.themeToggleBtn.innerHTML = gsIcon(theme === 'dark' ? 'sun' : 'moon', 16);
             this.themeToggleBtn.title = theme === 'dark' ? '라이트 테마로 전환 (Ctrl+Shift+L)' : '다크 테마로 전환 (Ctrl+Shift+L)';
         }
     },
@@ -109,27 +109,27 @@ Object.assign(HTMLLiveEditor.prototype, {
     getCommands() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         return [
-            { icon: '↶', title: '실행 취소', desc: '마지막 편집을 되돌립니다', kbd: 'Ctrl+Z', run: () => this.undo() },
-            { icon: '↷', title: '다시 실행', desc: '되돌린 편집을 다시 적용합니다', kbd: 'Ctrl+Y', run: () => this.redo() },
-            { icon: '📥', title: 'HTML 다운로드', desc: '편집된 HTML을 파일로 저장합니다', kbd: '', run: () => this.downloadHTML() },
-            { icon: isDark ? '☀️' : '🌙', title: isDark ? '라이트 테마로 전환' : '다크 테마로 전환', desc: '에디터 UI 테마를 전환합니다', kbd: 'Ctrl+Shift+L', run: () => this.toggleTheme() },
-            { icon: '🕐', title: '히스토리 타임라인', desc: '편집 기록을 보고 특정 시점으로 이동합니다', kbd: '', run: () => { this.toggleSidePanel(this.historyPanel); this.renderHistoryPanel(); } },
-            { icon: '⌨️', title: '단축키 가이드', desc: '사용 가능한 단축키를 확인합니다', kbd: '?', run: () => this.showShortcutsModal() },
-            { icon: '🤖', title: 'AI 스타일 변환', desc: 'AI로 페이지 스타일을 변경합니다', kbd: '', run: () => this.showAIModal() },
-            { icon: '🎨', title: '스타일 패널 열기', desc: '선택한 요소의 스타일을 편집합니다', kbd: '', run: () => this.showStylePanel() },
-            { icon: '📄', title: '요소 복제', desc: '선택한 요소를 복제합니다', kbd: 'Ctrl+D', run: () => this.duplicateElement() },
-            { icon: '🗑️', title: '요소 삭제', desc: '선택한 요소를 삭제합니다', kbd: 'Del', run: () => this.deleteElement() },
-            { icon: '📦', title: 'div로 감싸기', desc: '선택한 요소를 div로 감쌉니다', kbd: '', run: () => this.wrapWithDiv() },
-            { icon: '📤', title: '감싸기 해제', desc: '선택한 요소의 자식을 밖으로 꺼냅니다', kbd: '', run: () => this.unwrapElement() },
-            { icon: '↗️', title: '부모 밖으로 이동', desc: 'div 안에 갇힌 요소를 한 단계 위로 꺼냅니다', kbd: '', run: () => this.moveOutOfParent() },
-            { icon: '↘️', title: '앞 요소 안으로 이동', desc: '바로 앞 형제 요소 안으로 집어넣습니다', kbd: '', run: () => this.nestIntoPreviousSibling() },
-            { icon: '♻️', title: '인라인 스타일 초기화', desc: '선택한 요소의 인라인 스타일을 모두 지웁니다', kbd: '', run: () => this.clearInlineStyles() },
-            { icon: '🖥', title: '뷰포트: 전체 화면', desc: '미리보기를 전체 너비로 표시합니다', kbd: '', run: () => this.setViewport('full') },
-            { icon: '💻', title: '뷰포트: 데스크톱 1440', desc: '1440px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('desktop') },
-            { icon: '📱', title: '뷰포트: 태블릿 768', desc: '768px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('tablet') },
-            { icon: '📱', title: '뷰포트: 모바일 375', desc: '375px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('mobile') },
-            { icon: '💻', title: '외부 에디터로 열기', desc: '설정된 에디터에서 원본 파일을 엽니다', kbd: 'Ctrl+Shift+O', run: () => this.openInExternalEditor(this.preferredEditor) },
-            { icon: '📁', title: '로컬 파일 경로 설정', desc: '외부 에디터 연동을 위한 파일 경로를 설정합니다', kbd: '', run: () => this.showPathModal() }
+            { icon: 'undo', title: '실행 취소', desc: '마지막 편집을 되돌립니다', kbd: 'Ctrl+Z', run: () => this.undo() },
+            { icon: 'redo', title: '다시 실행', desc: '되돌린 편집을 다시 적용합니다', kbd: 'Ctrl+Y', run: () => this.redo() },
+            { icon: 'download', title: 'HTML 다운로드', desc: '편집된 HTML을 파일로 저장합니다', kbd: '', run: () => this.downloadHTML() },
+            { icon: isDark ? 'sun' : 'moon', title: isDark ? '라이트 테마로 전환' : '다크 테마로 전환', desc: '에디터 UI 테마를 전환합니다', kbd: 'Ctrl+Shift+L', run: () => this.toggleTheme() },
+            { icon: 'clock', title: '히스토리 타임라인', desc: '편집 기록을 보고 특정 시점으로 이동합니다', kbd: '', run: () => { this.toggleSidePanel(this.historyPanel); this.renderHistoryPanel(); } },
+            { icon: 'help', title: '단축키 가이드', desc: '사용 가능한 단축키를 확인합니다', kbd: '?', run: () => this.showShortcutsModal() },
+            { icon: 'sparkle', title: 'AI 스타일 변환', desc: 'AI로 페이지 스타일을 변경합니다', kbd: '', run: () => this.showAIModal() },
+            { icon: 'palette', title: '스타일 패널 열기', desc: '선택한 요소의 스타일을 편집합니다', kbd: '', run: () => this.showStylePanel() },
+            { icon: 'copy', title: '요소 복제', desc: '선택한 요소를 복제합니다', kbd: 'Ctrl+D', run: () => this.duplicateElement() },
+            { icon: 'trash', title: '요소 삭제', desc: '선택한 요소를 삭제합니다', kbd: 'Del', run: () => this.deleteElement() },
+            { icon: 'package', title: 'div로 감싸기', desc: '선택한 요소를 div로 감쌉니다', kbd: '', run: () => this.wrapWithDiv() },
+            { icon: 'unwrap', title: '감싸기 해제', desc: '선택한 요소의 자식을 밖으로 꺼냅니다', kbd: '', run: () => this.unwrapElement() },
+            { icon: 'move-out', title: '부모 밖으로 이동', desc: 'div 안에 갇힌 요소를 한 단계 위로 꺼냅니다', kbd: '', run: () => this.moveOutOfParent() },
+            { icon: 'move-in', title: '앞 요소 안으로 이동', desc: '바로 앞 형제 요소 안으로 집어넣습니다', kbd: '', run: () => this.nestIntoPreviousSibling() },
+            { icon: 'reset', title: '인라인 스타일 초기화', desc: '선택한 요소의 인라인 스타일을 모두 지웁니다', kbd: '', run: () => this.clearInlineStyles() },
+            { icon: 'maximize', title: '뷰포트: 전체 화면', desc: '미리보기를 전체 너비로 표시합니다', kbd: '', run: () => this.setViewport('full') },
+            { icon: 'monitor', title: '뷰포트: 데스크톱 1440', desc: '1440px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('desktop') },
+            { icon: 'tablet', title: '뷰포트: 태블릿 768', desc: '768px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('tablet') },
+            { icon: 'phone', title: '뷰포트: 모바일 375', desc: '375px 너비로 미리봅니다', kbd: '', run: () => this.setViewport('mobile') },
+            { icon: 'code', title: '외부 에디터로 열기', desc: '설정된 에디터에서 원본 파일을 엽니다', kbd: 'Ctrl+Shift+O', run: () => this.openInExternalEditor(this.preferredEditor) },
+            { icon: 'folder', title: '로컬 파일 경로 설정', desc: '외부 에디터 연동을 위한 파일 경로를 설정합니다', kbd: '', run: () => this.showPathModal() }
         ];
     },
 
@@ -179,7 +179,7 @@ Object.assign(HTMLLiveEditor.prototype, {
 
             const icon = document.createElement('div');
             icon.className = 'command-item-icon';
-            icon.textContent = command.icon;
+            icon.innerHTML = gsIcon(command.icon, 16);
 
             const body = document.createElement('div');
             body.className = 'command-item-body';

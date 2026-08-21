@@ -571,7 +571,7 @@ Object.assign(HTMLLiveEditor.prototype, {
             dropdown.classList.remove('open');
         }
 
-        // 유사 선택 드롭다운: 바깥 클릭 시 닫기 (🧲 버튼 클릭은 토글 로직이 처리)
+        // 유사 선택 드롭다운: 바깥 클릭 시 닫기 (유사 선택 버튼 클릭은 토글 로직이 처리)
         const similarDropdown = document.getElementById('similarDropdown');
         if (similarDropdown && !similarDropdown.contains(event.target) && !this.floatingToolbar.contains(event.target)) {
             similarDropdown.classList.remove('open');

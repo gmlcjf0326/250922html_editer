@@ -12,7 +12,7 @@
     <!-- 파일 업로드 초기 화면 -->
     <div class="upload-screen" id="uploadScreen">
         <div class="upload-container">
-            <div class="upload-icon">📄</div>
+            <div class="upload-icon"><span class="gs-ico" data-icon="file" data-icon-size="40"></span></div>
             <h1>HTML Live Editor Pro</h1>
             <p>클릭 한 번으로 요소를 고르고, 스타일 인스펙터로 글꼴·색상·여백·배치까지 정밀하게</p>
 
@@ -20,7 +20,7 @@
                 <div class="drop-zone-content">
                     <h3>HTML 파일을 여기에 드래그하거나</h3>
                     <button id="uploadBtn" class="btn btn-primary">
-                        📁 HTML 파일 선택
+                        <span class="gs-ico" data-icon="folder"></span> HTML 파일 선택
                     </button>
                     <small>지원 형식: .html, .htm</small>
                 </div>
@@ -28,11 +28,11 @@
 
             <div class="start-options">
                 <button class="start-option-btn" id="startBlankBtn">
-                    <span class="icon">✨</span>
+                    <span class="icon"><span class="gs-ico" data-icon="file-plus" data-icon-size="22"></span></span>
                     <div>빈 페이지에서 시작</div>
                 </button>
                 <button class="start-option-btn" id="startPickBtn">
-                    <span class="icon">📂</span>
+                    <span class="icon"><span class="gs-ico" data-icon="folder" data-icon-size="22"></span></span>
                     <div>로컬 파일 열기 (Chromium)</div>
                 </button>
             </div>
@@ -57,71 +57,71 @@
         <!-- 왼쪽 파일 정보 -->
         <div class="file-info" id="fileInfo">
             <span id="fileName" class="file-name"></span>
-            <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+            <span id="modeIndicator" class="mode-indicator"><span class="gs-ico" data-icon="wrench" data-icon-size="13"></span> 요소편집</span>
             <span id="selectionCount" class="selection-count" style="display: none;">0개 선택</span>
         </div>
 
         <!-- 오른쪽 버튼들 -->
         <div class="action-buttons">
-            <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)">⌘</button>
-            <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인">🕐</button>
+            <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)"><span class="gs-ico" data-icon="command"></span></button>
+            <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인"><span class="gs-ico" data-icon="clock"></span></button>
 
             <span class="gs-divider"></span>
 
             <!-- 원본 편집 드롭다운 -->
             <div class="gs-dropdown" id="openInEditorDropdown">
                 <button class="gs-toolbar-btn" id="openInEditorBtn" title="외부 에디터 / 브라우저 내장 에디터로 원본 열기 (Ctrl+Shift+O)">
-                    💻 원본 편집 <span class="chev">▾</span>
+                    <span class="gs-ico" data-icon="code" data-icon-size="15"></span> 원본 편집 <span class="chev"><span class="gs-ico" data-icon="chevron" data-icon-size="12"></span></span>
                 </button>
                 <div class="gs-dropdown-menu">
                     <div class="gs-dropdown-section">외부 에디터 (URL 스킴)</div>
                     <div class="gs-dropdown-item" data-editor="vscode">
-                        <span>🆚</span> VS Code 로 열기
+                        <span class="gs-ico" data-icon="code"></span> VS Code 로 열기
                     </div>
                     <div class="gs-dropdown-item" data-editor="cursor">
-                        <span>✨</span> Cursor 로 열기
+                        <span class="gs-ico" data-icon="sparkle"></span> Cursor 로 열기
                     </div>
                     <div class="gs-dropdown-item" data-editor="sublime">
-                        <span>🟠</span> Sublime Text
+                        <span class="gs-ico" data-icon="square"></span> Sublime Text
                     </div>
                     <div class="gs-dropdown-item" data-editor="webstorm">
-                        <span>🟣</span> WebStorm / JetBrains
+                        <span class="gs-ico" data-icon="diamond"></span> WebStorm / JetBrains
                     </div>
                     <div class="gs-dropdown-item" data-editor="set-path">
-                        <span>📁</span> 로컬 경로 설정…
+                        <span class="gs-ico" data-icon="folder"></span> 로컬 경로 설정…
                     </div>
                 </div>
             </div>
 
             <button id="aiStyleBtn" class="gs-toolbar-btn" title="AI 스타일 변환">
-                🤖 AI
+                <span class="gs-ico" data-icon="sparkle" data-icon-size="15"></span> AI
             </button>
             <button id="downloadBtn" class="gs-toolbar-btn primary" title="편집된 HTML 다운로드">
-                📥 다운로드
+                <span class="gs-ico" data-icon="download" data-icon-size="15"></span> 다운로드
             </button>
 
             <span class="gs-divider"></span>
 
-            <button id="undoBtn" class="gs-icon-btn" title="되돌리기 (Ctrl+Z)" disabled>↶</button>
-            <button id="redoBtn" class="gs-icon-btn" title="다시실행 (Ctrl+Y)" disabled>↷</button>
-            <button id="shortcutBtn" class="gs-icon-btn" title="단축키 가이드 (?)">?</button>
-            <button id="themeToggleBtn" class="gs-icon-btn" title="다크 / 라이트 테마">🌙</button>
+            <button id="undoBtn" class="gs-icon-btn" title="되돌리기 (Ctrl+Z)" disabled><span class="gs-ico" data-icon="undo"></span></button>
+            <button id="redoBtn" class="gs-icon-btn" title="다시실행 (Ctrl+Y)" disabled><span class="gs-ico" data-icon="redo"></span></button>
+            <button id="shortcutBtn" class="gs-icon-btn" title="단축키 가이드 (?)"><span class="gs-ico" data-icon="help"></span></button>
+            <button id="themeToggleBtn" class="gs-icon-btn" title="다크 / 라이트 테마"><span class="gs-ico" data-icon="moon"></span></button>
         </div>
     </div>
 
     <!-- 반응형 뷰포트 스위처 -->
     <div class="viewport-switcher" id="viewportSwitcher" style="display: none;">
         <button class="viewport-btn active" data-viewport="full" title="전체 화면">
-            🖥 <span class="viewport-size-label">전체</span>
+            <span class="gs-ico" data-icon="maximize" data-icon-size="14"></span> <span class="viewport-size-label">전체</span>
         </button>
         <button class="viewport-btn" data-viewport="desktop" title="데스크톱 1440">
-            💻 <span class="viewport-size-label">1440</span>
+            <span class="gs-ico" data-icon="monitor" data-icon-size="14"></span> <span class="viewport-size-label">1440</span>
         </button>
         <button class="viewport-btn" data-viewport="tablet" title="태블릿 768">
-            📱 <span class="viewport-size-label">768</span>
+            <span class="gs-ico" data-icon="tablet" data-icon-size="14"></span> <span class="viewport-size-label">768</span>
         </button>
         <button class="viewport-btn" data-viewport="mobile" title="모바일 375">
-            📱 <span class="viewport-size-label">375</span>
+            <span class="gs-ico" data-icon="phone" data-icon-size="14"></span> <span class="viewport-size-label">375</span>
         </button>
     </div>
 
@@ -139,7 +139,7 @@
     <!-- 스타일 인스펙터 패널 -->
     <div class="style-panel" id="stylePanel" style="display: none;">
         <div class="style-panel-header">
-            <h3>🎨 스타일 편집</h3>
+            <h3>스타일 편집</h3>
             <button class="style-panel-close" id="stylePanelClose">×</button>
         </div>
 
@@ -151,11 +151,11 @@
         </div>
 
         <div class="sp-tabs" id="spTabs">
-            <button class="sp-tab active" data-pane="structure" title="요소 구조 · 이동 · 태그">🧱 구조</button>
-            <button class="sp-tab" data-pane="text" title="글꼴 · 색상 · 정렬">🔠 텍스트</button>
-            <button class="sp-tab" data-pane="box" title="크기 · 여백 · 테두리">📐 박스</button>
-            <button class="sp-tab" data-pane="fill" title="배경 · 그림자 · 투명도">🎨 배경</button>
-            <button class="sp-tab" data-pane="layout" title="정렬 · Flex · 위치">🧭 배치</button>
+            <button class="sp-tab active" data-pane="structure" title="요소 구조 · 이동 · 태그"><span class="gs-ico" data-icon="layers" data-icon-size="14"></span> 구조</button>
+            <button class="sp-tab" data-pane="text" title="글꼴 · 색상 · 정렬"><span class="gs-ico" data-icon="type" data-icon-size="14"></span> 텍스트</button>
+            <button class="sp-tab" data-pane="box" title="크기 · 여백 · 테두리"><span class="gs-ico" data-icon="box" data-icon-size="14"></span> 박스</button>
+            <button class="sp-tab" data-pane="fill" title="배경 · 그림자 · 투명도"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 배경</button>
+            <button class="sp-tab" data-pane="layout" title="정렬 · Flex · 위치"><span class="gs-ico" data-icon="layout" data-icon-size="14"></span> 배치</button>
         </div>
 
         <div class="style-panel-content">
@@ -175,12 +175,12 @@
                 <div class="style-section">
                     <label class="style-label">요소 꺼내기 · 넣기</label>
                     <div class="sp-grid sp-grid-2">
-                        <button class="sp-btn primary" id="spMoveOut" title="선택 요소를 부모 div 밖으로 꺼냅니다">⤴ 부모 밖으로 빼기</button>
-                        <button class="sp-btn" id="spNestPrev" title="바로 앞 형제 요소 안으로 넣습니다">⤵ 앞 요소 안으로</button>
-                        <button class="sp-btn" id="spWrapDiv" title="선택 요소를 새 div로 감쌉니다">📦 div로 감싸기</button>
-                        <button class="sp-btn" id="spUnwrap" title="이 요소를 없애고 내용만 남깁니다">📤 감싸기 해제</button>
+                        <button class="sp-btn primary" id="spMoveOut" title="선택 요소를 부모 div 밖으로 꺼냅니다"><span class="gs-ico" data-icon="move-out" data-icon-size="14"></span> 부모 밖으로 빼기</button>
+                        <button class="sp-btn" id="spNestPrev" title="바로 앞 형제 요소 안으로 넣습니다"><span class="gs-ico" data-icon="move-in" data-icon-size="14"></span> 앞 요소 안으로</button>
+                        <button class="sp-btn" id="spWrapDiv" title="선택 요소를 새 div로 감쌉니다"><span class="gs-ico" data-icon="package" data-icon-size="14"></span> div로 감싸기</button>
+                        <button class="sp-btn" id="spUnwrap" title="이 요소를 없애고 내용만 남깁니다"><span class="gs-ico" data-icon="unwrap" data-icon-size="14"></span> 감싸기 해제</button>
                     </div>
-                    <p class="sp-hint">💡 <strong>부모 밖으로 빼기</strong>는 div 안에 갇힌 요소를 한 단계 위로 꺼냅니다. <strong>감싸기 해제</strong>는 껍데기 div만 지우고 내용은 남깁니다.</p>
+                    <p class="sp-hint"><span class="gs-ico" data-icon="bulb" data-icon-size="14"></span> <strong>부모 밖으로 빼기</strong>는 div 안에 갇힌 요소를 한 단계 위로 꺼냅니다. <strong>감싸기 해제</strong>는 껍데기 div만 지우고 내용은 남깁니다.</p>
                 </div>
 
                 <div class="style-section">
@@ -188,8 +188,8 @@
                     <div class="sp-grid sp-grid-4">
                         <button class="sp-btn" id="spMoveUp" title="위로 이동 (↑)">↑ 위로</button>
                         <button class="sp-btn" id="spMoveDown" title="아래로 이동 (↓)">↓ 아래로</button>
-                        <button class="sp-btn" id="spDuplicate" title="복제 (Ctrl+D)">📄 복제</button>
-                        <button class="sp-btn danger" id="spDelete" title="삭제 (Delete)">🗑 삭제</button>
+                        <button class="sp-btn" id="spDuplicate" title="복제 (Ctrl+D)"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</button>
+                        <button class="sp-btn danger" id="spDelete" title="삭제 (Delete)"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</button>
                     </div>
                 </div>
 
@@ -244,9 +244,9 @@
                 <div class="style-section">
                     <label class="style-label">인라인 스타일</label>
                     <div class="sp-grid sp-grid-3">
-                        <button class="sp-btn" id="spCopyStyle" title="이 요소의 인라인 스타일을 복사">📋 복사</button>
-                        <button class="sp-btn" id="spPasteStyle" title="복사한 스타일을 선택 요소에 적용">📌 붙여넣기</button>
-                        <button class="sp-btn danger" id="spResetStyle" title="이 요소의 인라인 스타일 전부 제거">♻️ 초기화</button>
+                        <button class="sp-btn" id="spCopyStyle" title="이 요소의 인라인 스타일을 복사"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복사</button>
+                        <button class="sp-btn" id="spPasteStyle" title="복사한 스타일을 선택 요소에 적용"><span class="gs-ico" data-icon="paste" data-icon-size="14"></span> 붙여넣기</button>
+                        <button class="sp-btn danger" id="spResetStyle" title="이 요소의 인라인 스타일 전부 제거"><span class="gs-ico" data-icon="reset" data-icon-size="14"></span> 초기화</button>
                     </div>
                     <textarea id="spStyleText" class="sp-textarea" rows="3" placeholder="color: #333; padding: 8px;"></textarea>
                     <button class="style-btn" id="spStyleTextApply">CSS 직접 적용</button>
@@ -330,17 +330,17 @@
                     <div class="style-row">
                         <input type="color" id="spTextColor" class="color-picker" value="#333333" data-css="color" data-sync="spTextColorText">
                         <input type="text" id="spTextColorText" class="color-text sp-grow" placeholder="#333333" data-css="color" data-sync="spTextColor">
-                        <button class="style-btn-small" data-clear="color" title="글자 색상 제거">✕</button>
+                        <button class="style-btn-small" data-clear="color" title="글자 색상 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
                     </div>
                 </div>
 
                 <div class="style-section">
                     <label class="style-label">정렬</label>
                     <div class="sp-btn-group">
-                        <button class="sp-toggle" data-css="textAlign" data-value="left" title="왼쪽 정렬">⬅</button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="left" title="왼쪽 정렬"><span class="gs-ico" data-icon="align-left" data-icon-size="14"></span></button>
                         <button class="sp-toggle" data-css="textAlign" data-value="center" title="가운데 정렬">↔</button>
-                        <button class="sp-toggle" data-css="textAlign" data-value="right" title="오른쪽 정렬">➡</button>
-                        <button class="sp-toggle" data-css="textAlign" data-value="justify" title="양쪽 정렬">☰</button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="right" title="오른쪽 정렬"><span class="gs-ico" data-icon="align-right" data-icon-size="14"></span></button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="justify" title="양쪽 정렬"><span class="gs-ico" data-icon="align-justify" data-icon-size="14"></span></button>
                     </div>
                 </div>
 
@@ -466,7 +466,7 @@
                     </div>
                     <div class="style-row">
                         <button class="style-btn" id="applyBorder">테두리 적용</button>
-                        <button class="style-btn-small" id="clearBorder" title="테두리 제거">✕</button>
+                        <button class="style-btn-small" id="clearBorder" title="테두리 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
                     </div>
                     <div class="sp-grid sp-grid-4">
                         <button class="sp-btn small" data-border-side="borderTop">위만</button>
@@ -522,7 +522,7 @@
                     <div class="style-row">
                         <input type="color" id="bgColor" class="color-picker" value="#ffffff" data-css="backgroundColor" data-sync="bgColorText">
                         <input type="text" id="bgColorText" class="color-text sp-grow" placeholder="#ffffff" data-css="backgroundColor" data-sync="bgColor">
-                        <button class="style-btn-small" id="bgColorClear" title="배경색 제거">✕</button>
+                        <button class="style-btn-small" id="bgColorClear" title="배경색 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
                     </div>
                 </div>
 
@@ -543,7 +543,7 @@
                     </div>
                     <div class="style-row">
                         <button class="style-btn" id="applyGradient">그라데이션 적용</button>
-                        <button class="style-btn-small" id="clearGradient" title="그라데이션 제거">✕</button>
+                        <button class="style-btn-small" id="clearGradient" title="그라데이션 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
                     </div>
                 </div>
 
@@ -592,7 +592,7 @@
                     </div>
                     <div class="style-row">
                         <button class="style-btn" id="applyShadow">그림자 적용</button>
-                        <button class="style-btn-small" id="clearShadow" title="그림자 제거">✕</button>
+                        <button class="style-btn-small" id="clearShadow" title="그림자 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
                     </div>
                 </div>
 
@@ -712,8 +712,8 @@
                         </div>
                     </div>
                     <div class="sp-grid sp-grid-2">
-                        <button class="sp-btn" id="spFlexRowCenter" title="가로 배치 + 가운데 정렬 한 번에">⚡ 가로 가운데 정렬</button>
-                        <button class="sp-btn" id="spCenterBlock" title="margin: 0 auto 로 가운데 배치">⚡ 블록 가운데</button>
+                        <button class="sp-btn" id="spFlexRowCenter" title="가로 배치 + 가운데 정렬 한 번에"><span class="gs-ico" data-icon="zap" data-icon-size="14"></span> 가로 가운데 정렬</button>
+                        <button class="sp-btn" id="spCenterBlock" title="margin: 0 auto 로 가운데 배치"><span class="gs-ico" data-icon="zap" data-icon-size="14"></span> 블록 가운데</button>
                     </div>
                 </div>
 
@@ -771,7 +771,7 @@
     <div class="modal-overlay" id="aiModal" style="display: none;">
         <div class="modal-content ai-modal">
             <div class="modal-header">
-                <h2>🤖 AI 스타일 변환</h2>
+                <h2><span class="gs-ico" data-icon="sparkle" data-icon-size="15"></span> AI 스타일 변환</h2>
                 <button class="modal-close" id="aiModalClose">×</button>
             </div>
 
@@ -799,7 +799,7 @@
                     <label class="ai-label">API 키</label>
                     <div class="api-key-row">
                         <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API 키를 입력하세요">
-                        <button class="toggle-visibility" id="toggleApiKey">👁</button>
+                        <button class="toggle-visibility" id="toggleApiKey"><span class="gs-ico" data-icon="eye"></span></button>
                     </div>
                     <small class="api-key-hint">API 키는 이 브라우저(localStorage)에만 저장되며, 스타일 생성 요청 시 선택한 AI 제공사(Google·Anthropic·OpenAI)로만 전송됩니다.</small>
                 </div>
@@ -820,12 +820,12 @@
                 <div class="ai-section">
                     <label class="ai-label">빠른 스타일</label>
                     <div class="quick-prompts">
-                        <button class="quick-prompt-btn" data-prompt="모던하고 미니멀한 디자인으로 변경해줘. 깔끔한 여백과 심플한 색상을 사용해줘.">🎯 모던 미니멀</button>
-                        <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘.">🌙 다크 테마</button>
-                        <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘.">🌸 따뜻한 느낌</button>
-                        <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘.">💼 프로페셔널</button>
-                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 밝은 색상과 그라데이션, 동적인 느낌을 사용해줘.">🎨 활기찬</button>
-                        <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘.">✨ 럭셔리</button>
+                        <button class="quick-prompt-btn" data-prompt="모던하고 미니멀한 디자인으로 변경해줘. 깔끔한 여백과 심플한 색상을 사용해줘."><span class="gs-ico" data-icon="target" data-icon-size="14"></span> 모던 미니멀</button>
+                        <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘."><span class="gs-ico" data-icon="moon" data-icon-size="14"></span> 다크 테마</button>
+                        <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘."><span class="gs-ico" data-icon="heart" data-icon-size="14"></span> 따뜻한 느낌</button>
+                        <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘."><span class="gs-ico" data-icon="briefcase" data-icon-size="14"></span> 프로페셔널</button>
+                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 밝은 색상과 그라데이션, 동적인 느낌을 사용해줘."><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 활기찬</button>
+                        <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘."><span class="gs-ico" data-icon="sparkle" data-icon-size="14"></span> 럭셔리</button>
                     </div>
                 </div>
 
@@ -848,7 +848,7 @@
             <div class="modal-footer">
                 <button class="modal-btn secondary" id="aiModalCancel">취소</button>
                 <button class="modal-btn primary" id="aiApplyBtn">
-                    <span class="btn-text">✨ AI 스타일 적용</span>
+                    <span class="btn-text"><span class="gs-ico" data-icon="sparkle" data-icon-size="14"></span> AI 스타일 적용</span>
                     <span class="btn-loading" style="display:none;">처리 중...</span>
                 </button>
             </div>
@@ -857,51 +857,51 @@
 
     <!-- 컨텍스트 메뉴 -->
     <div class="context-menu" id="contextMenu" style="display: none;">
-        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-item" data-action="style"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 스타일 편집</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="select-same-tag">🧲 같은 태그 모두 선택</div>
-        <div class="context-menu-item" data-action="select-tag-class">🧲 태그+클래스 일치 선택</div>
-        <div class="context-menu-item" data-action="select-siblings">🧲 형제 모두 선택</div>
-        <div class="context-menu-item" data-action="select-descendants">🧲 하위 동일 태그 전체</div>
+        <div class="context-menu-item" data-action="select-same-tag"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 같은 태그 모두 선택</div>
+        <div class="context-menu-item" data-action="select-tag-class"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 태그+클래스 일치 선택</div>
+        <div class="context-menu-item" data-action="select-siblings"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 형제 모두 선택</div>
+        <div class="context-menu-item" data-action="select-descendants"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 하위 동일 태그 전체</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
-        <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
-        <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
-        <div class="context-menu-item" data-action="add-link">➕ 링크 추가</div>
+        <div class="context-menu-item" data-action="add-button"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 버튼 추가</div>
+        <div class="context-menu-item" data-action="add-list-item"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 리스트 아이템 추가</div>
+        <div class="context-menu-item" data-action="add-image"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 이미지 추가</div>
+        <div class="context-menu-item" data-action="add-link"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 링크 추가</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="wrap-div">📦 div로 감싸기</div>
-        <div class="context-menu-item" data-action="unwrap">📤 감싸기 해제</div>
+        <div class="context-menu-item" data-action="wrap-div"><span class="gs-ico" data-icon="package" data-icon-size="14"></span> div로 감싸기</div>
+        <div class="context-menu-item" data-action="unwrap"><span class="gs-ico" data-icon="unwrap" data-icon-size="14"></span> 감싸기 해제</div>
         <div class="context-menu-item" data-action="move-out">↗️ 부모 밖으로 빼기</div>
         <div class="context-menu-item" data-action="nest-prev">↘️ 앞 요소 안으로 넣기</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
-        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+        <div class="context-menu-item" data-action="duplicate"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</div>
+        <div class="context-menu-item" data-action="delete"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</div>
     </div>
 
     <!-- 테이블 전용 컨텍스트 메뉴 -->
     <div class="table-context-menu" id="tableContextMenu" style="display: none;">
-        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-item" data-action="style"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 스타일 편집</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="add-row-above">⬆️ 위에 행 추가</div>
-        <div class="context-menu-item" data-action="add-row-below">⬇️ 아래에 행 추가</div>
-        <div class="context-menu-item" data-action="add-col-left">⬅️ 왼쪽에 열 추가</div>
-        <div class="context-menu-item" data-action="add-col-right">➡️ 오른쪽에 열 추가</div>
+        <div class="context-menu-item" data-action="add-row-above"><span class="gs-ico" data-icon="arrow-up" data-icon-size="14"></span> 위에 행 추가</div>
+        <div class="context-menu-item" data-action="add-row-below"><span class="gs-ico" data-icon="arrow-down" data-icon-size="14"></span> 아래에 행 추가</div>
+        <div class="context-menu-item" data-action="add-col-left"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 왼쪽에 열 추가</div>
+        <div class="context-menu-item" data-action="add-col-right"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 오른쪽에 열 추가</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="delete-row">❌ 행 삭제</div>
-        <div class="context-menu-item" data-action="delete-col">❌ 열 삭제</div>
+        <div class="context-menu-item" data-action="delete-row"><span class="gs-ico" data-icon="x" data-icon-size="14"></span> 행 삭제</div>
+        <div class="context-menu-item" data-action="delete-col"><span class="gs-ico" data-icon="x" data-icon-size="14"></span> 열 삭제</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
-        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+        <div class="context-menu-item" data-action="duplicate"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</div>
+        <div class="context-menu-item" data-action="delete"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</div>
     </div>
 
     <!-- 플로팅 툴바 -->
     <div class="floating-toolbar" id="floatingToolbar" style="display: none;">
-        <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
-        <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
-        <button class="toolbar-btn" data-action="style" title="스타일 편집">🎨</button>
-        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)">🧲</button>
-        <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
-        <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
+        <button class="toolbar-btn" data-action="move-up" title="위로 이동"><span class="gs-ico" data-icon="arrow-up" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="move-down" title="아래로 이동"><span class="gs-ico" data-icon="arrow-down" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="style" title="스타일 편집"><span class="gs-ico" data-icon="palette" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)"><span class="gs-ico" data-icon="magnet" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="duplicate" title="복제"><span class="gs-ico" data-icon="copy" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="delete" title="삭제"><span class="gs-ico" data-icon="trash" data-icon-size="15"></span></button>
     </div>
 
     <!-- 유사 선택 드롭다운 -->
@@ -916,7 +916,7 @@
     <!-- 히스토리 타임라인 패널 -->
     <div class="history-panel" id="historyPanel">
         <div class="history-panel-header">
-            <h3>🕐 히스토리</h3>
+            <h3>히스토리</h3>
             <button class="gs-icon-btn" id="historyPanelClose" title="닫기">×</button>
         </div>
         <div class="history-list" id="historyList"></div>
@@ -925,7 +925,7 @@
     <!-- 명령 팔레트 -->
     <div class="command-palette-overlay" id="commandPaletteOverlay" style="display: none;">
         <div class="command-palette" role="dialog" aria-label="명령 팔레트">
-            <input type="text" id="commandPaletteInput" class="command-palette-input" placeholder="⌨️  명령 검색... (예: 삭제, 템플릿, 다크모드)" autocomplete="off">
+            <input type="text" id="commandPaletteInput" class="command-palette-input" placeholder="명령 검색… (예: 복제, 감싸기, 다크 테마)" autocomplete="off">
             <div class="command-palette-list" id="commandPaletteList"></div>
         </div>
     </div>
@@ -974,7 +974,7 @@
     <div class="modal-overlay" id="pathModal" style="display: none;">
         <div class="modal-content" style="max-width:520px;">
             <div class="modal-header">
-                <h2>📁 로컬 파일 경로 설정</h2>
+                <h2>로컬 파일 경로 설정</h2>
                 <button class="modal-close" id="pathModalClose">×</button>
             </div>
             <div class="modal-body">
@@ -996,6 +996,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- 로드 순서 주의: editor-core.js 가 클래스를 선언하고 나머지가 prototype 을 확장한다 -->
+    <script src="js/icons.js"></script>
     <script src="js/editor-core.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/selection.js"></script>

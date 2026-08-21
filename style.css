@@ -1251,10 +1251,14 @@ body {
 }
 
 .mode-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
 	background: var(--gs-primary-soft);
 	color: var(--gs-primary);
-	padding: 4px 10px;
-	border-radius: var(--gs-radius-pill);
+	padding: 4px 9px;
+	border-radius: var(--gs-radius-sm);
 	font-size: 12px;
 	font-weight: 500;
 }
@@ -2124,3 +2128,53 @@ body[data-viewport="desktop"] {
 	margin-bottom: 6px;
 }
 
+
+/* ============== 인라인 SVG 아이콘 ============== */
+/* 이모지 대신 currentColor 스트로크 SVG — 색·굵기가 주변 텍스트를 따라간다 */
+.gs-ico {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	line-height: 0;
+	color: inherit;
+}
+
+.gs-svg {
+	display: block;
+}
+
+/* 아이콘만 있는 버튼은 색을 조금 눌러 두고, 강조 버튼 안에서는 그대로 따라간다 */
+.gs-icon-btn .gs-ico,
+.toolbar-btn .gs-ico,
+.gs-toolbar-btn .gs-ico {
+	color: var(--gs-text-muted);
+}
+
+.gs-toolbar-btn.primary .gs-ico,
+.gs-icon-btn:hover .gs-ico,
+.toolbar-btn:hover .gs-ico,
+.sp-btn.primary .gs-ico,
+.sp-toggle.active .gs-ico,
+.viewport-btn.active .gs-ico {
+	color: inherit;
+}
+
+.toolbar-btn[data-action="delete"] .gs-ico {
+	color: var(--gs-danger);
+}
+
+.command-item-icon .gs-ico {
+	color: var(--gs-text-muted);
+}
+
+.toast-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
+.gs-toolbar-btn.done {
+	background: var(--gs-success);
+	border-color: var(--gs-success);
+	color: #fff;
+}

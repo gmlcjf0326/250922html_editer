@@ -68,10 +68,10 @@ Object.assign(HTMLLiveEditor.prototype, {
         const input = this.apiKeyInput;
         if (input.type === 'password') {
             input.type = 'text';
-            this.toggleApiKey.textContent = '🙈';
+            this.toggleApiKey.innerHTML = gsIcon('eye-off', 16);
         } else {
             input.type = 'password';
-            this.toggleApiKey.textContent = '👁';
+            this.toggleApiKey.innerHTML = gsIcon('eye', 16);
         }
     },
 

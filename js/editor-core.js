@@ -16,7 +16,7 @@ const GS_BLANK_HTML = `<!DOCTYPE html>
 <body>
 <main>
     <h1>새 문서</h1>
-    <p>여기를 클릭해 텍스트를 편집하고, 요소를 선택한 뒤 🎨 스타일 편집 패널에서 자유롭게 꾸며보세요.</p>
+    <p>여기를 클릭해 텍스트를 편집하고, 요소를 선택한 뒤 스타일 편집 패널에서 자유롭게 꾸며보세요.</p>
 </main>
 </body>
 </html>`;
@@ -259,7 +259,7 @@ class HTMLLiveEditor {
         const viewportSwitcher = document.getElementById('viewportSwitcher');
         if (viewportSwitcher) viewportSwitcher.style.display = 'flex';
 
-        this.modeIndicator.textContent = '🔧 요소편집';
+        this.modeIndicator.innerHTML = gsIcon('wrench', 13) + ' 요소편집';
         this.modeIndicator.style.color = '#007bff';
 
         this.renderHTML();
@@ -545,13 +545,14 @@ class HTMLLiveEditor {
     }
 
     showDownloadSuccess() {
-        const originalText = this.downloadBtn.textContent;
-        this.downloadBtn.textContent = '✅ 완료!';
-        this.downloadBtn.style.background = '#218838';
+        // 아이콘이 SVG 라 textContent 로는 복원되지 않는다
+        const original = this.downloadBtn.innerHTML;
+        this.downloadBtn.innerHTML = gsIcon('check', 15) + ' 완료!';
+        this.downloadBtn.classList.add('done');
 
         setTimeout(() => {
-            this.downloadBtn.textContent = originalText;
-            this.downloadBtn.style.background = '';
+            this.downloadBtn.innerHTML = original;
+            this.downloadBtn.classList.remove('done');
         }, 1500);
     }
 
