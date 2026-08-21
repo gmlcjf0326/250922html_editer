@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: "Inter", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    a { color: #a78bfa; } a:hover { color: #c4b5fd; }
+    .sec { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7684; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 880px; height: 760px; box-sizing: border-box; background: #0a0c10; padding: 28px; display: flex; flex-direction: column; gap: 18px;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <div style="font-size: 22px; font-weight: 700; color: #e6edf3; letter-spacing: -0.01em;">C · 콘솔 (Console)</div>
+      <div style="font-size: 12px; font-weight: 600; color: #a78bfa; background: rgba(167,139,250,0.14); border-radius: 999px; padding: 3px 9px;">다크 우선 · 고밀도</div>
+    </div>
+    <div style="font-size: 13px; line-height: 1.6; color: #9aa7b6; max-width: 720px; text-wrap: pretty;">거의 검은 배경 위에 보라 강조 하나. 행 높이 28px, 숫자는 전부 고정폭, 단축키를 눈에 보이게 배치해 키보드로 달리는 사용자를 우선합니다. 편집 중인 문서만 밝게 떠오릅니다.<br><span style="color: #6b7684;">트레이드오프 — 라이트 테마가 부차적이 되고, 밝은 환경에서는 대비가 피로합니다.</span></div>
+  </div>
+
+  <!-- 툴바 -->
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="sec">상단 툴바 · 높이 48px</div>
+    <div style="height: 48px; background: #12161d; border: 1px solid #232a35; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px;">
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #a78bfa;"></span>
+        <span class="mono" style="font-size: 12px; font-weight: 500; color: #e6edf3;">demo.html</span>
+        <span class="mono" style="font-size: 11px; color: #6b7684;">· 요소 편집</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <button style="height: 28px; padding: 0 9px; font-size: 12px; color: #9aa7b6; background: transparent; border: 1px solid #232a35; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">원본 편집<span class="mono" style="font-size: 10px; color: #6b7684; background: #171c25; border-radius: 3px; padding: 1px 4px;">⌘⇧O</span></button>
+        <button style="height: 28px; padding: 0 9px; font-size: 12px; color: #9aa7b6; background: transparent; border: 1px solid #232a35; border-radius: 6px;">AI</button>
+        <button style="width: 28px; height: 28px; background: transparent; border: 1px solid #232a35; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button style="width: 28px; height: 28px; background: transparent; border: 1px solid #232a35; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+        <span style="width: 1px; height: 16px; background: #232a35; margin: 0 4px;"></span>
+        <button style="height: 28px; padding: 0 11px; font-size: 12px; font-weight: 600; color: #0a0c10; background: #a78bfa; border: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0c10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>다운로드</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 356px; gap: 16px; flex-grow: 1; min-height: 0;">
+
+    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+      <div class="sec">선택 상태 · 문서만 밝게</div>
+      <div style="background: #12161d; border: 1px solid #232a35; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 14px; flex-grow: 1;">
+
+        <div style="display: flex; gap: 2px; padding: 3px; background: #171c25; border: 1px solid #323b49; border-radius: 7px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); width: max-content;">
+          <button style="width: 28px; height: 28px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+          <button style="width: 28px; height: 28px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 12-7 7-7-7"/><path d="M12 5v14"/></svg></button>
+          <button style="width: 28px; height: 28px; border: none; border-radius: 5px; background: rgba(167,139,250,0.16); display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-1-1-1.5-2-1.5h-2a2 2 0 0 1 0-4h1c1 0 2-.6 2-2A3.5 3.5 0 0 0 12 3Z"/></svg></button>
+          <button style="width: 28px; height: 28px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg></button>
+        </div>
+
+        <div style="background: #ffffff; border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="position: relative; outline: 2px solid #a78bfa; outline-offset: 2px; border-radius: 2px; padding: 10px 12px;">
+            <div class="mono" style="position: absolute; top: -9px; left: 0; font-size: 10px; font-weight: 600; color: #0a0c10; background: #a78bfa; border-radius: 3px; padding: 1px 6px;">h1.title</div>
+            <div style="font-size: 19px; font-weight: 700; color: #0f172a;">선택된 제목</div>
+          </div>
+          <div style="outline: 1px solid rgba(167,139,250,0.55); outline-offset: 2px; border-radius: 2px; padding: 9px 12px;">
+            <div style="font-size: 13px; color: #475569;">마우스 오버</div>
+          </div>
+          <div style="outline: 2px solid #a78bfa; outline-offset: 2px; border-radius: 2px; padding: 9px 12px; background: rgba(167,139,250,0.10); display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 13px; color: #475569;">다중 선택</div>
+            <span class="mono" style="font-size: 10px; font-weight: 600; color: #6d28d9; background: rgba(167,139,250,0.22); border-radius: 3px; padding: 2px 6px;">3</span>
+          </div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid #232a35;">
+          <div style="display: flex; gap: 4px;">
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #0a0c10; border: 1px solid #232a35;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #12161d; border: 1px solid #232a35;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #232a35;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #6b7684;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #e6edf3;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #a78bfa;"></span>
+          </div>
+          <div class="mono" style="font-size: 10px; color: #6b7684;">28px 행 · 4px 격자</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+      <div class="sec">스타일 인스펙터</div>
+      <div style="background: #12161d; border: 1px solid #232a35; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; flex-grow: 1;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #232a35;">
+          <div style="font-size: 12px; font-weight: 600; color: #e6edf3; letter-spacing: 0.02em;">스타일</div>
+          <span class="mono" style="font-size: 10px; color: #6b7684; background: #171c25; border-radius: 3px; padding: 1px 5px;">esc</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #0f131a; border-bottom: 1px solid #232a35;">
+          <span class="mono" style="font-size: 10px; font-weight: 600; color: #0a0c10; background: #a78bfa; padding: 2px 6px; border-radius: 3px;">h1</span>
+          <span class="mono" style="font-size: 11px; color: #6b7684;">.title</span>
+        </div>
+        <div style="display: flex; border-bottom: 1px solid #232a35;">
+          <div style="flex: 1; text-align: center; padding: 7px 0; font-size: 11px; font-weight: 600; color: #e6edf3; background: #171c25; box-shadow: inset 0 -2px 0 #a78bfa;">구조</div>
+          <div style="flex: 1; text-align: center; padding: 7px 0; font-size: 11px; color: #6b7684;">텍스트</div>
+          <div style="flex: 1; text-align: center; padding: 7px 0; font-size: 11px; color: #6b7684;">박스</div>
+          <div style="flex: 1; text-align: center; padding: 7px 0; font-size: 11px; color: #6b7684;">배경</div>
+          <div style="flex: 1; text-align: center; padding: 7px 0; font-size: 11px; color: #6b7684;">배치</div>
+        </div>
+
+        <div style="padding: 12px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="sec">요소 꺼내기 · 넣기</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+              <button style="height: 28px; font-size: 11px; font-weight: 600; color: #0a0c10; background: #a78bfa; border: none; border-radius: 5px;">부모 밖으로</button>
+              <button style="height: 28px; font-size: 11px; color: #c9d3de; background: #171c25; border: 1px solid #232a35; border-radius: 5px;">앞 요소 안으로</button>
+              <button style="height: 28px; font-size: 11px; color: #c9d3de; background: #171c25; border: 1px solid #232a35; border-radius: 5px;">div로 감싸기</button>
+              <button style="height: 28px; font-size: 11px; color: #c9d3de; background: #171c25; border: 1px solid #232a35; border-radius: 5px;">감싸기 해제</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="sec">글자 크기</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex-grow: 1; height: 3px; border-radius: 2px; background: #232a35; position: relative;">
+                <div style="position: absolute; inset: 0 62% 0 0; background: #a78bfa; border-radius: 2px;"></div>
+                <div style="position: absolute; left: 38%; top: -4.5px; width: 12px; height: 12px; border-radius: 3px; background: #a78bfa;"></div>
+              </div>
+              <div class="mono" style="width: 52px; height: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 0 7px; font-size: 11px; color: #e6edf3; background: #171c25; border: 1px solid #232a35; border-radius: 5px; box-sizing: border-box;">42<span style="color: #6b7684;">px</span></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="sec">글자 색상 · 포커스</div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 28px; height: 28px; border-radius: 5px; background: #ffffff; border: 1px solid #323b49;"></span>
+              <div class="mono" style="flex-grow: 1; height: 28px; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #e6edf3; background: #171c25; border: 1px solid #a78bfa; border-radius: 5px; box-shadow: 0 0 0 3px rgba(167,139,250,0.2); box-sizing: border-box;">#ffffff</div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="sec">정렬</div>
+            <div style="display: flex; gap: 3px;">
+              <button style="flex: 1; height: 26px; border: 1px solid #232a35; border-radius: 5px; background: #171c25; display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
+              <button style="flex: 1; height: 26px; border: 1px solid #a78bfa; border-radius: 5px; background: rgba(167,139,250,0.16); display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M6 18h12"/></svg></button>
+              <button style="flex: 1; height: 26px; border: 1px solid #232a35; border-radius: 5px; background: #171c25; display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
+              <button style="flex: 1; height: 26px; border: 1px solid #232a35; border-radius: 5px; background: #171c25; display: flex; align-items: center; justify-content: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa7b6" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid #232a35;">
+            <span class="sec">되돌리기</span>
+            <span class="mono" style="font-size: 10px; color: #6b7684; background: #171c25; border-radius: 3px; padding: 2px 6px;">⌘Z</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Inter", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    a { color: #2563eb; } a:hover { color: #1d4ed8; }
+    .spec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; }
+    .flag { font-size: 11px; font-weight: 600; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 2px 8px; }
+  </style>
+</helmet>
+
+<div style="width: 880px; height: 760px; box-sizing: border-box; background: #eef1f5; padding: 28px 28px 0; display: flex; flex-direction: column; gap: 18px;">
+
+  <div style="display: flex; align-items: baseline; gap: 12px;">
+    <div style="font-size: 22px; font-weight: 700; color: #0f172a;">현재 상태</div>
+    <div style="font-size: 13px; color: #64748b;">style.css 2,138줄 · 실측 재현</div>
+  </div>
+
+  <!-- 툴바 -->
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="spec-label">상단 툴바</div>
+    <div style="height: 60px; background: rgba(255,255,255,0.95); border: 1px solid #e5e7eb; border-bottom-color: rgba(0,0,0,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">demo.html</span>
+        <span style="font-size: 12px; font-weight: 500; color: #2563eb; background: #dbeafe; border-radius: 999px; padding: 4px 10px;">🔧 요소편집</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button style="width: 36px; height: 36px; font-size: 16px; color: #0f172a; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center;">⌘</button>
+        <button style="width: 36px; height: 36px; font-size: 16px; color: #0f172a; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center;">🕐</button>
+        <button style="height: 36px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: #0f172a; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;">💻 원본 편집 ▾</button>
+        <button style="height: 36px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: #0f172a; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;">🤖 AI</button>
+        <button style="height: 36px; padding: 8px 12px; font-size: 13px; font-weight: 500; color: #fff; background: #2563eb; border: 1px solid #2563eb; border-radius: 10px;">📥 다운로드</button>
+      </div>
+    </div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <span class="flag">이모지 아이콘 12개</span>
+      <span class="flag">.top-buttons 중복 선언</span>
+    </div>
+  </div>
+
+  <!-- 패널 + 선택 상태 -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 384px; gap: 20px; flex-grow: 1;">
+
+    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+      <div class="spec-label">선택 · 플로팅 툴바</div>
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 16px; flex-grow: 1;">
+        <div style="display: flex; gap: 4px; padding: 6px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: max-content;">
+          <button style="width: 36px; height: 36px; border: none; border-radius: 8px; font-size: 16px; background: #f8f9fa; color: #333;">↑</button>
+          <button style="width: 36px; height: 36px; border: none; border-radius: 8px; font-size: 16px; background: #f8f9fa; color: #333;">↓</button>
+          <button style="width: 36px; height: 36px; border: none; border-radius: 8px; font-size: 16px; background: #f8f9fa; color: #333;">🎨</button>
+          <button style="width: 36px; height: 36px; border: none; border-radius: 8px; font-size: 16px; background: #f8f9fa; color: #333;">🧲</button>
+          <button style="width: 36px; height: 36px; border: none; border-radius: 8px; font-size: 16px; background: #f8f9fa; color: #333;">✖</button>
+        </div>
+
+        <div style="outline: 2px solid #007bff; outline-offset: 2px; border-radius: 2px; padding: 14px 16px; background: #f8fafc;">
+          <div style="font-size: 20px; font-weight: 700; color: #0f172a;">선택된 제목</div>
+        </div>
+        <div style="outline: 1px dashed #007bff; outline-offset: 1px; padding: 12px 16px; background: #fff;">
+          <div style="font-size: 14px; color: #475569;">마우스 오버 상태</div>
+        </div>
+        <div style="outline: 2px solid #6366f1; outline-offset: 1px; background: rgba(99,102,241,0.06); padding: 12px 16px;">
+          <div style="font-size: 14px; color: #475569;">다중 선택 상태</div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+          <span class="flag">선택 파랑 #007bff · 토큰 파랑 #2563eb · 다중 인디고 #6366f1 — 계열 3개</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="spec-label">스타일 인스펙터</div>
+      <div style="background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; flex-grow: 1;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+          <div style="font-size: 16px; font-weight: 600;">🎨 스타일 편집</div>
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 18px;">×</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f1f3f5; border-bottom: 1px solid #e5e7eb;">
+          <span style="font-family: monospace; font-weight: 700; font-size: 12px; color: #fff; background: #2563eb; padding: 2px 8px; border-radius: 6px;">h1</span>
+          <span style="font-family: monospace; font-size: 12px; color: #64748b;">.title ↳ div 안</span>
+        </div>
+        <div style="display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid #e5e7eb;">
+          <div style="flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #2563eb; background: #dbeafe; border-bottom: 2px solid #2563eb; border-radius: 6px 6px 0 0;">🧱 구조</div>
+          <div style="flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #64748b;">🔠 텍스트</div>
+          <div style="flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #64748b;">📐 박스</div>
+          <div style="flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #64748b;">🎨 배경</div>
+          <div style="flex: 1; text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: #64748b;">🧭 배치</div>
+        </div>
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0;">
+            <div style="font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">요소 꺼내기 · 넣기</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <button style="padding: 8px 6px; font-size: 12px; color: #fff; background: #6366f1; border: 1px solid #6366f1; border-radius: 8px;">⤴ 부모 밖으로 빼기</button>
+              <button style="padding: 8px 6px; font-size: 12px; color: #334155; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;">⤵ 앞 요소 안으로</button>
+              <button style="padding: 8px 6px; font-size: 12px; color: #334155; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;">📦 div로 감싸기</button>
+              <button style="padding: 8px 6px; font-size: 12px; color: #334155; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;">📤 감싸기 해제</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">클래스 / ID</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #94a3b8; width: 10px; text-align: center;">.</span>
+              <input value="title" style="flex: 1; min-width: 0; padding: 7px 10px; font-size: 12px; color: #334155; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; font-family: inherit;">
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: auto; padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 6px;">
+          <span class="flag">헤더 보라 그라데이션 — 토큰에 없는 색</span>
+          <span class="flag">radius 16px · 8px · 6px 혼재</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 14px 0 22px; display: flex; gap: 26px; align-items: center;">
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; color: #b91c1c; font-variant-numeric: tabular-nums;">25</div><div style="font-size: 11px; color: #64748b;">#007bff 사용</div></div>
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; color: #b91c1c; font-variant-numeric: tabular-nums;">17</div><div style="font-size: 11px; color: #64748b;">#e0e0e0 사용</div></div>
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; color: #b91c1c; font-variant-numeric: tabular-nums;">10</div><div style="font-size: 11px; color: #64748b;">보라 그라데이션</div></div>
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; color: #b91c1c; font-variant-numeric: tabular-nums;">10</div><div style="font-size: 11px; color: #64748b;">radius 종류</div></div>
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 26px; font-weight: 700; color: #b91c1c; font-variant-numeric: tabular-nums;">3</div><div style="font-size: 11px; color: #64748b;">중복 선언 규칙</div></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

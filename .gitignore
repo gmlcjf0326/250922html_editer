@@ -2,3 +2,4 @@
 node_modules/
 tests/test-results/
 tests/playwright-report/
+design/html-editor-ui-refresh.html

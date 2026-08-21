@@ -1,0 +1,10 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "제안 — 정밀(A) 전체 화면", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Current.dc.html", "title": "현재 상태", "x": 0, "y": 1040, "w": 880, "h": 760 },
+    { "file": "DirectionA.dc.html", "title": "A · 정밀", "x": 960, "y": 1040, "w": 880, "h": 760 },
+    { "file": "DirectionB.dc.html", "title": "B · 에디토리얼", "x": 1920, "y": 1040, "w": 880, "h": 760 },
+    { "file": "DirectionC.dc.html", "title": "C · 콘솔", "x": 2880, "y": 1040, "w": 880, "h": 760 }
+  ],
+  "launch": { "view": "canvas" }
+}
