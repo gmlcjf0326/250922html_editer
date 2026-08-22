@@ -96,52 +96,59 @@ body {
 
 .upload-container {
 	text-align: center;
-	color: white;
-	max-width: 500px;
+	color: var(--gs-text);
+	max-width: 520px;
 	padding: 40px;
 }
 
 .upload-icon {
-	font-size: 5rem;
-	margin-bottom: 20px;
-	opacity: 0.8;
+	display: flex;
+	justify-content: center;
+	margin-bottom: 18px;
+	color: var(--gs-text-subtle);
 }
 
 .upload-container h1 {
-	font-size: 2.5rem;
-	margin-bottom: 10px;
-	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+	font-size: 2rem;
+	margin-bottom: 8px;
+	color: var(--gs-text);
 }
 
 .upload-container p {
-	font-size: 1.1rem;
-	margin-bottom: 30px;
-	opacity: 0.9;
+	font-size: 15px;
+	line-height: 1.6;
+	margin-bottom: 28px;
+	color: var(--gs-text-muted);
 }
 
 .drop-zone {
-	background: rgba(255, 255, 255, 0.1);
-	border: 3px dashed rgba(255, 255, 255, 0.3);
-	border-radius: var(--gs-radius-lg);
-	padding: 40px;
-	transition: all 0.3s ease;
+	background: var(--gs-surface);
+	border: 1px dashed var(--gs-border-strong);
+	border-radius: var(--gs-radius-md);
+	padding: 36px 32px;
+	box-shadow: var(--gs-shadow-sm);
+	transition: border-color var(--gs-transition), background var(--gs-transition);
 }
 
 .drop-zone.drag-over {
-	background: rgba(255, 255, 255, 0.2);
-	border-color: rgba(255, 255, 255, 0.8);
-	transform: scale(1.05);
+	background: var(--gs-primary-soft);
+	border-color: var(--gs-primary);
+	border-style: solid;
 }
 
 .drop-zone-content h3 {
-	margin-bottom: 20px;
-	font-size: 1.2rem;
+	margin-bottom: 18px;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--gs-text);
 }
 
 .drop-zone-content small {
 	display: block;
-	margin-top: 15px;
-	opacity: 0.7;
+	margin-top: 14px;
+	font-size: 12px;
+	/* subtle(#98a2b3) 은 흰 배경에서 2.5:1 밖에 안 나온다 — 본문 보조색을 쓴다 */
+	color: var(--gs-text-muted);
 }
 
 /* 버튼 스타일 */
@@ -165,9 +172,8 @@ body {
 }
 
 .btn-primary:hover {
-	background: white;
-	transform: translateY(-2px);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+	background: var(--gs-primary-hover);
+	box-shadow: var(--gs-shadow-sm);
 }
 
 /* 전체화면 iframe */
@@ -2109,26 +2115,33 @@ body[data-viewport="desktop"] {
 }
 
 .start-option-btn {
-	padding: 18px 14px;
-	background: rgba(255, 255, 255, 0.08);
-	border: 1px solid rgba(255, 255, 255, 0.15);
-	border-radius: var(--gs-radius-md);
-	color: #fff;
+	padding: 16px 14px;
+	background: var(--gs-surface);
+	border: 1px solid var(--gs-border);
+	border-radius: var(--gs-radius-sm);
+	color: var(--gs-text);
 	cursor: pointer;
-	transition: all var(--gs-transition);
+	transition: border-color var(--gs-transition), background var(--gs-transition);
 	font-size: 13px;
+	font-weight: 500;
+	font-family: inherit;
 	text-align: center;
 }
 
 .start-option-btn:hover {
-	background: rgba(255, 255, 255, 0.18);
-	transform: translateY(-2px);
+	background: var(--gs-surface-hover);
+	border-color: var(--gs-border-strong);
 }
 
 .start-option-btn .icon {
-	display: block;
-	font-size: 24px;
-	margin-bottom: 6px;
+	display: flex;
+	justify-content: center;
+	margin-bottom: 8px;
+	color: var(--gs-text-subtle);
+}
+
+.start-option-btn:hover .icon {
+	color: var(--gs-primary);
 }
 
 
