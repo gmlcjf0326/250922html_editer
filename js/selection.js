@@ -97,6 +97,8 @@ Object.assign(HTMLLiveEditor.prototype, {
             // iframe에 포커스가 있어도 단축키가 동작하도록 iframe 문서에도 바인딩
             // (편집 중 대부분의 시간 동안 포커스는 iframe 안에 있음)
             doc.addEventListener('keydown', (e) => this.handleKeydown(e));
+            // 뷰포트 전환·창 크기 변경으로 레이아웃이 바뀌면 리사이즈 핸들을 따라 붙인다
+            doc.defaultView.addEventListener('resize', () => this.updateCanvasOverlay());
 
             this.currentEventListeners = [
                 { event: 'mouseenter', handler: mouseenterHandler },
@@ -120,6 +122,9 @@ Object.assign(HTMLLiveEditor.prototype, {
         const maxAttempts = 10;
 
         while (current && current.tagName && attempts < maxAttempts) {
+            // 편집용 오버레이(리사이즈 핸들 등)는 선택·드래그 대상이 아니다
+            if (current.hasAttribute && current.hasAttribute('data-editor-ui')) return null;
+
             const tagName = current.tagName.toLowerCase();
 
             if (excludedTags.includes(tagName)) {
@@ -196,6 +201,7 @@ Object.assign(HTMLLiveEditor.prototype, {
             }
             this.updateSelectionCount();
             this.blurIframeText();
+            this.hideCanvasOverlay();
             return;
         }
 
@@ -212,6 +218,7 @@ Object.assign(HTMLLiveEditor.prototype, {
 
         this.showFloatingToolbar(element);
         this.showDOMNavigator(element);
+        this.updateCanvasOverlay();
 
         // 스타일 패널이 열려있으면 업데이트
         if (this.stylePanelOpen) {
@@ -226,6 +233,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         }
         this.hideFloatingToolbar();
         this.hideDOMNavigator();
+        this.hideCanvasOverlay();
         this.clearMultiSelection();
     },
 

@@ -563,13 +563,18 @@ Object.assign(HTMLLiveEditor.prototype, {
                 break;
         }
 
+        // switch 에 없는 태그(p·h2·div …)도 요청된 텍스트를 담는다
+        if (textContent && !newElement.textContent && tagName !== 'img') {
+            newElement.textContent = textContent;
+        }
+
         if (this.selectedElement) {
             this.selectedElement.parentNode.insertBefore(newElement, this.selectedElement.nextSibling);
         } else {
             doc.body.appendChild(newElement);
         }
 
-        if (textContent && ['button', 'li', 'a'].includes(tagName)) {
+        if (newElement.textContent && !['img', 'hr'].includes(tagName)) {
             this.makeElementEditable(newElement);
         }
 

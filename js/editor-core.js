@@ -384,6 +384,88 @@ class HTMLLiveEditor {
                 outline: 2px solid #2563eb;
                 box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
             }
+            #gs-canvas-overlay {
+                position: absolute;
+                display: none;
+                pointer-events: none;
+                z-index: 9990;
+            }
+            #gs-canvas-overlay .gs-rh {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                background: #fff;
+                border: 2px solid #2563eb;
+                border-radius: 3px;
+                pointer-events: auto;
+                box-sizing: border-box;
+            }
+            #gs-canvas-overlay .gs-rh[data-dir="e"] { right: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+            #gs-canvas-overlay .gs-rh[data-dir="s"] { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+            #gs-canvas-overlay .gs-rh[data-dir="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
+            #gs-canvas-overlay .gs-size-badge {
+                position: absolute;
+                right: 0;
+                bottom: -26px;
+                pointer-events: none;
+                font: 500 11px/1 "JetBrains Mono", monospace;
+                color: #fff;
+                background: #2563eb;
+                padding: 4px 7px;
+                border-radius: 4px;
+                white-space: nowrap;
+            }
+            #gs-canvas-overlay .gs-add-btn {
+                /* 요소 '안쪽' 좌하단 모서리 — 밖으로 내밀면 다음 형제의 클릭을,
+                   중앙에 두면 요소 자신의 재클릭을 가로챈다 */
+                position: absolute;
+                left: 4px;
+                bottom: 4px;
+                width: 22px;
+                height: 22px;
+                border: none;
+                border-radius: 50%;
+                background: #2563eb;
+                color: #fff;
+                font-size: 15px;
+                line-height: 1;
+                cursor: pointer;
+                pointer-events: auto;
+                box-shadow: 0 1px 4px rgba(16, 24, 40, 0.3);
+            }
+            #gs-canvas-overlay .gs-add-menu {
+                position: absolute;
+                left: 4px;
+                bottom: 30px;
+                display: none;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 3px;
+                width: 168px;
+                padding: 4px;
+                background: #fff;
+                border: 1px solid #e4e7ec;
+                border-radius: 8px;
+                box-shadow: 0 6px 16px rgba(16, 24, 40, 0.14);
+                pointer-events: auto;
+                z-index: 9991;
+            }
+            #gs-canvas-overlay .gs-add-menu.open { display: grid; }
+            #gs-canvas-overlay .gs-add-menu button {
+                padding: 6px 4px;
+                font-size: 11px;
+                font-family: inherit;
+                color: #344054;
+                background: #fff;
+                border: 1px solid #e4e7ec;
+                border-radius: 5px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            #gs-canvas-overlay .gs-add-menu button:hover {
+                background: #eff4ff;
+                border-color: #2563eb;
+                color: #2563eb;
+            }
         `;
         doc.head.appendChild(style);
     }
@@ -413,7 +495,7 @@ class HTMLLiveEditor {
 
                     // span으로 감싸면 값·렌더링이 깨지는 컨테이너는 조상까지 확인해 제외
                     // (textarea 값 파괴, pre/code 서식 변형, svg 내 HTML 삽입 등)
-                    if (parent.closest && parent.closest('textarea, pre, code, svg, noscript, select, option')) {
+                    if (parent.closest && parent.closest('textarea, pre, code, svg, noscript, select, option, [data-editor-ui]')) {
                         return NodeFilter.FILTER_REJECT;
                     }
 
@@ -485,6 +567,8 @@ class HTMLLiveEditor {
             span.textContent = element.textContent;
             element.textContent = '';
             element.appendChild(span);
+            // 리스너 없이 두면 편집은 되는데 히스토리에 기록되지 않는다
+            this.bindEditableSpan(span);
         }
     }
 
@@ -497,6 +581,9 @@ class HTMLLiveEditor {
         // 에디터 스타일 제거
         const editorStyles = clonedDoc.getElementById('editor-styles');
         if (editorStyles) editorStyles.remove();
+
+        // 편집용 오버레이(리사이즈 핸들 · + 버튼)는 산출물이 아니다
+        clonedDoc.querySelectorAll('[data-editor-ui]').forEach(node => node.remove());
 
         const editStyles = clonedDoc.querySelectorAll('style');
         editStyles.forEach(style => {

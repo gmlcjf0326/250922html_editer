@@ -88,6 +88,22 @@ Object.assign(HTMLLiveEditor.prototype, {
         }
     },
 
+    // 히스토리 스냅숏용 — 편집용 오버레이는 문서 상태가 아니므로 뺀다
+    serializeDocumentForSnapshot(doc) {
+        const clone = doc.documentElement.cloneNode(true);
+        clone.querySelectorAll('[data-editor-ui]').forEach(node => node.remove());
+
+        let doctype = '';
+        if (doc.doctype) {
+            const dt = doc.doctype;
+            doctype = '<!DOCTYPE ' + dt.name
+                + (dt.publicId ? ` PUBLIC "${dt.publicId}"` : '')
+                + (!dt.publicId && dt.systemId ? ' SYSTEM' : '')
+                + (dt.systemId ? ` "${dt.systemId}"` : '') + '>\n';
+        }
+        return doctype + clone.outerHTML;
+    },
+
     serializeDocument(doc) {
         let doctype = '';
         if (doc.doctype) {

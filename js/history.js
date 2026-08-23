@@ -22,7 +22,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         }
 
         const snapshot = {
-            html: this.serializeDocument(doc),
+            html: this.serializeDocumentForSnapshot(doc),
             action: actionName,
             timestamp: Date.now(),
             selectedElementSelector: selectedElementSelector
@@ -38,6 +38,8 @@ Object.assign(HTMLLiveEditor.prototype, {
         }
 
         this.updateHistoryButtons();
+        // 편집 직후 레이아웃이 바뀌었을 수 있으니 리사이즈 핸들 위치를 맞춘다
+        this.updateCanvasOverlay();
     },
 
     getElementSelector(element) {

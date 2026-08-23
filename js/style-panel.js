@@ -451,5 +451,6 @@ Object.assign(HTMLLiveEditor.prototype, {
             el.style[property] = value;
         });
         this.saveToHistory(`스타일 변경: ${property}`, false);
+        this.updateCanvasOverlay();
     }
 });
