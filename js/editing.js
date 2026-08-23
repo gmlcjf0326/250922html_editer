@@ -601,9 +601,9 @@ Object.assign(HTMLLiveEditor.prototype, {
         if (targets.length === 0) return false;
 
         // 다중 선택은 문서 순서대로 — 붙여넣었을 때 순서가 뒤집히지 않게
-        const doc = targets[0].ownerDocument;
+        // (4 = DOCUMENT_POSITION_FOLLOWING)
         const ordered = targets.slice().sort((a, b) =>
-            (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+            (a.compareDocumentPosition(b) & 4) ? -1 : 1);
 
         this.elementClipboard = ordered.map(el => this.cleanElementCopy(el));
 
