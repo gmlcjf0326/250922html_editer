@@ -262,7 +262,6 @@ class HTMLLiveEditor {
         if (viewportSwitcher) viewportSwitcher.style.display = 'flex';
 
         this.modeIndicator.innerHTML = gsIcon('wrench', 13) + ' 요소편집';
-        this.modeIndicator.style.color = '#007bff';
 
         this.renderHTML();
     }
@@ -677,6 +676,64 @@ class HTMLLiveEditor {
                 this.showToast('파일을 여는 중 오류가 발생했습니다.', 'error');
             }
         }
+    }
+
+    // ---------- 작업 자동 보존 (localStorage 백업) ----------
+    // 저장소가 아니라 안전망이다: 새로고침·실수로 닫기에서 마지막 상태를 건진다.
+
+    saveBackup() {
+        try {
+            const html = this.extractCleanHTML();
+            if (html.length > 4 * 1024 * 1024) {
+                if (!this.backupSizeWarned) {
+                    this.backupSizeWarned = true;
+                    this.showToast('문서가 4MB 를 넘어 자동 백업을 건너뜁니다. 다운로드로 직접 저장하세요.', 'warning');
+                }
+                return;
+            }
+            localStorage.setItem('gs_backup', JSON.stringify({
+                html,
+                name: (this.fileName && this.fileName.textContent) || 'untitled.html',
+                time: Date.now(),
+            }));
+        } catch (error) {
+            // 백업 실패(용량 초과 등)가 편집을 막아서는 안 된다
+        }
+    }
+
+    readBackup() {
+        try {
+            const raw = localStorage.getItem('gs_backup');
+            if (!raw) return null;
+            const backup = JSON.parse(raw);
+            return backup && backup.html ? backup : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    clearBackup() {
+        try { localStorage.removeItem('gs_backup'); } catch (error) { /* 무시 */ }
+    }
+
+    initRestoreCard() {
+        const card = document.getElementById('restoreCard');
+        if (!card) return;
+
+        const backup = this.readBackup();
+        if (!backup) return;
+
+        document.getElementById('restoreName').textContent = backup.name;
+        document.getElementById('restoreTime').textContent = this.formatRelativeTime(backup.time);
+        card.style.display = 'flex';
+
+        document.getElementById('restoreOpenBtn').addEventListener('click', () => {
+            this.loadFromString(backup.html, backup.name);
+        });
+        document.getElementById('restoreDismissBtn').addEventListener('click', () => {
+            this.clearBackup();
+            card.style.display = 'none';
+        });
     }
 
     bindStartOptions() {

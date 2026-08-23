@@ -2319,3 +2319,82 @@ body[data-viewport="desktop"] {
 	background: var(--gs-primary-soft);
 	border-color: var(--gs-primary);
 }
+
+/* ============== 이어서 편집 (자동 백업 복구 카드) ============== */
+.restore-card {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	text-align: left;
+	margin-bottom: 18px;
+	padding: 12px 14px;
+	background: var(--gs-surface);
+	border: 1px solid var(--gs-border);
+	border-radius: var(--gs-radius-md);
+	box-shadow: var(--gs-shadow-sm);
+}
+
+.restore-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	flex-shrink: 0;
+	color: var(--gs-primary);
+	background: var(--gs-primary-soft);
+	border-radius: var(--gs-radius-sm);
+}
+
+.restore-info {
+	flex-grow: 1;
+	min-width: 0;
+}
+
+.restore-info strong {
+	font-family: var(--gs-font-mono);
+	font-size: 13px;
+	color: var(--gs-text);
+}
+
+.restore-time {
+	font-size: 12px;
+	color: var(--gs-text-muted);
+	margin-left: 6px;
+}
+
+.restore-info small {
+	display: block;
+	margin-top: 2px;
+	font-size: 11px;
+	color: var(--gs-text-muted);
+}
+
+.restore-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.restore-actions .btn {
+	margin: 0;
+	padding: 8px 14px;
+	font-size: 13px;
+}
+
+.restore-dismiss {
+	height: 32px;
+	padding: 0 10px;
+	font-size: 12px;
+	color: var(--gs-text-muted);
+	background: transparent;
+	border: 1px solid var(--gs-border);
+	border-radius: var(--gs-radius-sm);
+	cursor: pointer;
+}
+
+.restore-dismiss:hover {
+	color: var(--gs-danger);
+	border-color: var(--gs-danger);
+}

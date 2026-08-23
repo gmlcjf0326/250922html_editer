@@ -46,6 +46,16 @@ Object.assign(HTMLLiveEditor.prototype, {
         return !v || v === 'transparent' || v === 'rgba(0,0,0,0)';
     },
 
+    formatRelativeTime(timestamp) {
+        const diff = Date.now() - timestamp;
+        const min = Math.floor(diff / 60000);
+        if (min < 1) return '방금 전';
+        if (min < 60) return `${min}분 전`;
+        const hour = Math.floor(min / 60);
+        if (hour < 24) return `${hour}시간 전`;
+        return `${Math.floor(hour / 24)}일 전`;
+    },
+
     formatComputedHint(value) {
         return value.replace(/(-?[\d.]+)px/g, (match, num) => `${Math.round(parseFloat(num))}px`);
     },

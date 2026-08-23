@@ -40,6 +40,8 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.updateHistoryButtons();
         // 편집 직후 레이아웃이 바뀌었을 수 있으니 리사이즈 핸들 위치를 맞춘다
         this.updateCanvasOverlay();
+        // 마지막 편집 상태를 안전망으로 남긴다 (실패해도 편집엔 영향 없음)
+        this.saveBackup();
     },
 
     getElementSelector(element) {

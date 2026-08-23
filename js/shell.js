@@ -31,6 +31,7 @@ Object.assign(HTMLLiveEditor.prototype, {
 
     initGluestackModules() {
         this.bindStartOptions();
+        this.initRestoreCard();
         this.bindSidePanels();
         this.bindCommandPalette();
         this.bindViewportSwitcher();

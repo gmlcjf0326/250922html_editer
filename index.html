@@ -25,6 +25,18 @@
             <h1>HTML Live Editor Pro</h1>
             <p>클릭 한 번으로 요소를 고르고, 스타일 인스펙터로 글꼴·색상·여백·배치까지 정밀하게</p>
 
+            <div class="restore-card" id="restoreCard" style="display: none;">
+                <span class="restore-icon"><span class="gs-ico" data-icon="clock" data-icon-size="18"></span></span>
+                <div class="restore-info">
+                    <div><strong id="restoreName"></strong> <span id="restoreTime" class="restore-time"></span></div>
+                    <small>마지막 편집의 자동 백업 — 새 문서를 열면 덮어써지는 안전망입니다</small>
+                </div>
+                <div class="restore-actions">
+                    <button id="restoreOpenBtn" class="btn btn-primary">이어서 편집</button>
+                    <button id="restoreDismissBtn" class="restore-dismiss" title="백업 삭제">삭제</button>
+                </div>
+            </div>
+
             <div class="drop-zone" id="dropZone">
                 <div class="drop-zone-content">
                     <h3>HTML 파일을 여기에 드래그하거나</h3>
