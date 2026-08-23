@@ -219,6 +219,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.showFloatingToolbar(element);
         this.showDOMNavigator(element);
         this.updateCanvasOverlay();
+        this.scheduleTreeRefresh();
 
         // 스타일 패널이 열려있으면 업데이트
         if (this.stylePanelOpen) {

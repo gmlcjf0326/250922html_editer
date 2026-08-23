@@ -42,6 +42,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.updateCanvasOverlay();
         // 마지막 편집 상태를 안전망으로 남긴다 (실패해도 편집엔 영향 없음)
         this.saveBackup();
+        this.scheduleTreeRefresh();
     },
 
     getElementSelector(element) {

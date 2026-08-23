@@ -225,7 +225,7 @@ test.describe('편집 동작 (선택 · 구조 · 히스토리)', () => {
       guide: document.getElementById('dragGuide').textContent,
     }));
     expect(midDrag.insideClass).toBe(true);
-    expect(midDrag.guide).toContain('div 안에 넣기');
+    expect(midDrag.guide).toContain('div#empty-box 안에 넣기');
 
     await fireMouse(page, 'mouseup', to.x, to.y);
     const landed = await page.evaluate(() => {

@@ -135,8 +135,9 @@ Object.assign(HTMLLiveEditor.prototype, {
     describeElementBrief(element) {
         if (!element || !element.tagName) return '';
         const tag = element.tagName.toLowerCase();
+        const id = element.id ? '#' + element.id : '';
         const classes = this.getContentClasses(element).slice(0, 2);
-        return tag + (classes.length ? '.' + classes.join('.') : '');
+        return tag + id + (classes.length ? '.' + classes.join('.') : '');
     },
 
     getContentClasses(element) {

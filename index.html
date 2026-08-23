@@ -85,6 +85,7 @@
         <!-- 오른쪽 버튼들 -->
         <div class="action-buttons">
             <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)"><span class="gs-ico" data-icon="command"></span></button>
+            <button id="treeBtn" class="gs-icon-btn" title="요소 트리 (Ctrl+E)"><span class="gs-ico" data-icon="layers"></span></button>
             <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인"><span class="gs-ico" data-icon="clock"></span></button>
 
             <span class="gs-divider"></span>
@@ -1004,6 +1005,15 @@
     </div>
 
     <!-- 히스토리 타임라인 패널 -->
+    <!-- 요소 트리 패널 (왼쪽) -->
+    <div class="tree-panel" id="treePanel">
+        <div class="history-panel-header">
+            <h3>요소 트리</h3>
+            <button class="history-panel-close" id="treePanelClose">×</button>
+        </div>
+        <div class="tree-list" id="treeList"></div>
+    </div>
+
     <div class="history-panel" id="historyPanel">
         <div class="history-panel-header">
             <h3>히스토리</h3>
@@ -1095,6 +1105,7 @@
     <script src="js/selection.js"></script>
     <script src="js/editing.js"></script>
     <script src="js/canvas-controls.js"></script>
+    <script src="js/tree-panel.js"></script>
     <script src="js/history.js"></script>
     <script src="js/style-panel.js"></script>
     <script src="js/doc-theme.js"></script>

@@ -33,6 +33,7 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.bindStartOptions();
         this.initRestoreCard();
         this.bindSidePanels();
+        this.bindTreePanel();
         this.bindCommandPalette();
         this.bindViewportSwitcher();
         this.bindEditorDropdown();
@@ -64,7 +65,7 @@ Object.assign(HTMLLiveEditor.prototype, {
     },
 
     closeSidePanels() {
-        [this.historyPanel].forEach(panel => {
+        [this.historyPanel, this.treePanel].forEach(panel => {
             if (panel) panel.classList.remove('open');
         });
     },
@@ -435,7 +436,12 @@ Object.assign(HTMLLiveEditor.prototype, {
             if (!inEditableSpan || !elementLevelCombo) return;
         }
 
-        if (event.ctrlKey && event.shiftKey && (event.key === 'l' || event.key === 'L')) {
+        if (event.ctrlKey && !event.shiftKey && (event.key === 'e' || event.key === 'E')) {
+            // Ctrl+E: 요소 트리
+            event.preventDefault();
+            this.toggleSidePanel(this.treePanel);
+            this.renderTreePanel();
+        } else if (event.ctrlKey && event.shiftKey && (event.key === 'l' || event.key === 'L')) {
             event.preventDefault();
             this.toggleTheme();
         } else if (event.ctrlKey && event.shiftKey && (event.key === 'o' || event.key === 'O')) {
