@@ -157,19 +157,21 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
   test('뷰포트 막대는 아래 iframe 콘텐츠의 클릭을 가로채지 않는다', async ({ page }) => {
     await openEditor(page, 'demo.html');
 
-    // 막대의 실제 좌표를 재서, 버튼이 아닌 막대 여백 위에 편집 대상이 오도록 맞춘다
+    // 막대의 실제 좌표를 재서, 버튼이 아닌 막대 여백 위에 편집 대상이 오도록 맞춘다.
+    // iframe 은 툴바 아래에서 시작하므로 페이지 좌표를 iframe 내부 좌표로 변환해야 한다.
     const point = await page.evaluate(() => {
       const bar = document.getElementById('viewportSwitcher').getBoundingClientRect();
+      const frame = document.getElementById('previewFrame').getBoundingClientRect();
       const doc = document.getElementById('previewFrame').contentDocument;
       const target = doc.querySelector('.hero h1');
       target.style.position = 'fixed';
       target.style.margin = '0';
-      target.style.left = Math.round(bar.left) + 'px';
-      target.style.top = Math.round(bar.top) + 'px';
+      target.style.left = Math.round(bar.left - frame.left) + 'px';
+      target.style.top = Math.round(bar.top - frame.top) + 'px';
       target.style.width = Math.round(bar.width) + 'px';
       target.style.height = Math.round(bar.height) + 'px';
-      // 막대 안쪽이지만 버튼이 시작되기 전인 왼쪽 패딩 지점
-      return { x: Math.round(bar.left) + 2, y: Math.round(bar.top) + 2, bottom: Math.round(bar.bottom) };
+      // 막대 안쪽이지만 버튼이 시작되기 전인 왼쪽 패딩 지점 (페이지 좌표)
+      return { x: Math.round(bar.left) + 2, y: Math.round(bar.top) + 2 };
     });
 
     // 클릭 지점이 막대의 경계 안(기하학적으로)인지 확인한다.
@@ -346,6 +348,68 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
       };
     });
     expect(state).toEqual({ editing: true, inH1: true });
+  });
+
+
+  // ---------- 고정 UI 가 문서를 가리지 않는지 (스크롤 도달성) ----------
+
+  test('여백 없는 문서의 첫 요소가 툴바 뒤에 숨지 않는다', async ({ page }) => {
+    await openEditor(page, 'nopad.html');
+
+    const top = await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      (doc.scrollingElement || doc.documentElement).scrollTop = 0;
+      const h1 = doc.getElementById('first').getBoundingClientRect();
+      const frame = document.getElementById('previewFrame').getBoundingClientRect();
+      const bar = document.getElementById('topButtons').getBoundingClientRect();
+      return { pageTop: frame.top + h1.top, barBottom: bar.bottom };
+    });
+    // 스크롤로는 0 위로 못 올라가므로, 첫 요소는 애초에 툴바 아래에서 시작해야 한다
+    expect(top.pageTop).toBeGreaterThanOrEqual(top.barBottom);
+  });
+
+  test('문서 끝까지 스크롤하면 마지막 내용이 DOM 내비게이터에 가리지 않는다', async ({ page }) => {
+    await openEditor(page, 'demo.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      for (let i = 0; i < 40; i++) {
+        const p = doc.createElement('p');
+        p.className = 'filler';
+        p.textContent = '항목 ' + i;
+        doc.body.appendChild(p);
+      }
+      window.htmlEditor.selectElement(doc.querySelector('h1')); // 내비게이터 표시
+    });
+
+    await expect.poll(() => page.evaluate(() => document.body.classList.contains('nav-open'))).toBe(true);
+
+    const res = await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const scroller = doc.scrollingElement || doc.documentElement;
+      scroller.scrollTop = 999999;
+      const all = doc.querySelectorAll('p.filler');
+      const last = all[all.length - 1].getBoundingClientRect();
+      const frame = document.getElementById('previewFrame').getBoundingClientRect();
+      const nav = document.getElementById('domNavigator').getBoundingClientRect();
+      return { lastPageBottom: frame.top + last.bottom, navTop: nav.top, atEnd: scroller.scrollTop >= scroller.scrollHeight - scroller.clientHeight - 2 };
+    });
+    expect(res.atEnd).toBe(true);
+    expect(res.lastPageBottom).toBeLessThanOrEqual(res.navTop);
+  });
+
+  test('선택을 해제하면 미리보기가 다시 전체 높이를 되찾는다', async ({ page }) => {
+    await openEditor(page, 'demo.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.querySelector('h1'));
+    });
+    const shrunk = await page.evaluate(() => document.getElementById('previewFrame').getBoundingClientRect().height);
+
+    await page.evaluate(() => window.htmlEditor.clearSelection());
+    await expect.poll(() => page.evaluate(() => document.body.classList.contains('nav-open'))).toBe(false);
+
+    const full = await page.evaluate(() => document.getElementById('previewFrame').getBoundingClientRect().height);
+    expect(full).toBeGreaterThan(shrunk);
   });
 
 });

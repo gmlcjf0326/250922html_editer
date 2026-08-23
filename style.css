@@ -179,15 +179,24 @@ body {
 /* 전체화면 iframe */
 .fullscreen-frame {
 	position: fixed;
-	top: 0;
+	/* 툴바는 화면 전체 폭을 막는 고정 UI다. iframe 을 top: 0 에 두면 여백 없는
+	   문서의 첫 요소가 툴바 뒤에 영영 숨어(스크롤로도 못 올라감) 보이지도
+	   선택되지도 않는다. 그래서 툴바 아래에서 시작한다. */
+	top: var(--gs-toolbar-h);
 	left: 0;
 	width: 100vw;
-	height: 100vh;
+	height: calc(100vh - var(--gs-toolbar-h));
 	border: none;
 	z-index: 1;
 	/* 편집 대상 문서는 사용자의 산출물이다. 자체 배경이 없는 문서가 에디터의
 	   어두운 캔버스에 묻혀 읽히지 않는 일이 없도록 항상 종이 바탕을 깐다. */
 	background: #ffffff;
+}
+
+/* DOM 내비게이터가 떠 있는 동안에는 그 높이만큼 미리보기를 줄인다 —
+   그러지 않으면 문서 끝까지 스크롤해도 마지막 내용이 내비게이터에 가린다 */
+body.nav-open .fullscreen-frame {
+	height: calc(100vh - var(--gs-toolbar-h) - 120px);
 }
 
 /* 상단 버튼 영역 — 실제 값은 아래 "상단 툴바" 블록에 한 번만 둔다 */

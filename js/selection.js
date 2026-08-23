@@ -400,17 +400,21 @@ Object.assign(HTMLLiveEditor.prototype, {
 
     showDOMNavigator(element) {
         if (!element) {
-            this.domNavigator.style.display = 'none';
+            this.hideDOMNavigator();
             return;
         }
 
         this.domNavigator.style.display = 'flex';
+        // 내비게이터는 문서 위에 떠 있으므로, 그만큼 미리보기 높이를 줄여
+        // 문서의 마지막 내용이 그 아래에 영영 가려지지 않게 한다
+        document.body.classList.add('nav-open');
         this.updateBreadcrumb(element);
         this.updateNavigationButtons(element);
     },
 
     hideDOMNavigator() {
         this.domNavigator.style.display = 'none';
+        document.body.classList.remove('nav-open');
     },
 
     updateBreadcrumb(element) {
