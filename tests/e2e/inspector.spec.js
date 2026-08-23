@@ -169,7 +169,7 @@ test.describe('스타일 인스펙터', () => {
     expect(await inlineStyle(page, 'h1.title', 'borderTopLeftRadius')).toBe('40px');
   });
 
-  test('배경 탭: 배경색·그라데이션·이미지·그림자·투명도·팔레트 대상 전환', async ({ page }) => {
+  test('배경 탭: 배경색·이미지·그림자·투명도·팔레트 대상 전환', async ({ page }) => {
     await openEditor(page, 'inspector.html');
     await selectAndOpenInspector(page, 'h1.title');
     await page.click('.sp-tab[data-pane="fill"]');
@@ -177,8 +177,12 @@ test.describe('스타일 인스펙터', () => {
     await setControl(page, '#bgColorText', '#00ff00');
     expect(await inlineStyle(page, 'h1.title', 'backgroundColor')).toBe('rgb(0, 255, 0)');
 
-    await page.click('#applyGradient');
-    expect(await inlineStyle(page, 'h1.title', 'background')).toContain('linear-gradient');
+    // 그라데이션 생성 UI 는 제거됐다 (문서 탭의 "그라데이션 평탄화"만 남긴다)
+    const gradientUI = await page.evaluate(() => ({
+      apply: !!document.getElementById('applyGradient'),
+      start: !!document.getElementById('gradientStart'),
+    }));
+    expect(gradientUI).toEqual({ apply: false, start: false });
 
     await page.fill('#spBgImage', 'https://example.com/a.png');
     await page.click('#spBgImageApply');

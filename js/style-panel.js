@@ -114,13 +114,6 @@ Object.assign(HTMLLiveEditor.prototype, {
             this.applyStyle('background', '');
         });
 
-        wire('applyGradient', () => {
-            const start = document.getElementById('gradientStart').value;
-            const end = document.getElementById('gradientEnd').value;
-            const direction = document.getElementById('gradientDirection').value;
-            this.applyStyle('background', `linear-gradient(${direction}, ${start}, ${end})`);
-        });
-        wire('clearGradient', () => this.applyStyle('background', ''));
 
         wire('spBgImageApply', () => {
             const url = document.getElementById('spBgImage').value.trim();

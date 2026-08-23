@@ -644,11 +644,6 @@ body {
 	background: var(--gs-surface-2);
 }
 
-.gradient-arrow {
-	font-size: 18px;
-	color: var(--gs-text-subtle);
-}
-
 .spacing-row {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
@@ -2480,3 +2475,24 @@ body[data-viewport="desktop"] {
 	text-overflow: ellipsis;
 	min-width: 0;
 }
+
+/* ============== AI 연결 테스트 ============== */
+.ai-test-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 8px;
+	flex-wrap: wrap;
+}
+
+.ai-test-status {
+	flex: 1 1 200px;
+	min-width: 0;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--gs-text-subtle);
+}
+
+.ai-test-status.ok { color: var(--gs-success); font-weight: 500; }
+.ai-test-status.warn { color: var(--gs-warning); }
+.ai-test-status.error { color: var(--gs-danger); }

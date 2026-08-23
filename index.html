@@ -550,27 +550,6 @@
                 </div>
 
                 <div class="style-section">
-                    <label class="style-label">그라데이션</label>
-                    <div class="style-row">
-                        <input type="color" id="gradientStart" class="color-picker" value="#667eea">
-                        <span class="gradient-arrow">→</span>
-                        <input type="color" id="gradientEnd" class="color-picker" value="#764ba2">
-                        <select id="gradientDirection" class="style-select sp-grow">
-                            <option value="to right">→ 오른쪽</option>
-                            <option value="to left">← 왼쪽</option>
-                            <option value="to bottom">↓ 아래</option>
-                            <option value="to top">↑ 위</option>
-                            <option value="to bottom right">↘ 대각선</option>
-                            <option value="to bottom left">↙ 대각선</option>
-                        </select>
-                    </div>
-                    <div class="style-row">
-                        <button class="style-btn" id="applyGradient">그라데이션 적용</button>
-                        <button class="style-btn-small" id="clearGradient" title="그라데이션 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
-                    </div>
-                </div>
-
-                <div class="style-section">
                     <label class="style-label">배경 이미지</label>
                     <div class="style-row">
                         <input type="text" id="spBgImage" class="sp-input sp-grow" placeholder="https://... 이미지 주소">
@@ -899,6 +878,10 @@
                     <label class="ai-label">모델명</label>
                     <input type="text" id="aiModelInput" class="api-key-input" placeholder="기본 모델 사용" autocomplete="off">
                     <small class="api-key-hint">비워두면 기본 모델을 사용합니다. <span id="aiModelDefault"></span></small>
+                    <div class="ai-test-row">
+                        <button type="button" id="aiTestBtn" class="sp-btn">연결 테스트</button>
+                        <span id="aiTestStatus" class="ai-test-status">키와 모델명이 실제로 통하는지 확인합니다</span>
+                    </div>
                 </div>
 
                 <!-- 스타일 프롬프트 -->
@@ -915,7 +898,7 @@
                         <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘."><span class="gs-ico" data-icon="moon" data-icon-size="14"></span> 다크 테마</button>
                         <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘."><span class="gs-ico" data-icon="heart" data-icon-size="14"></span> 따뜻한 느낌</button>
                         <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘."><span class="gs-ico" data-icon="briefcase" data-icon-size="14"></span> 프로페셔널</button>
-                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 밝은 색상과 그라데이션, 동적인 느낌을 사용해줘."><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 활기찬</button>
+                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 채도 높은 단색과 시원한 여백을 사용하고 그라데이션은 쓰지 마."><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 활기찬</button>
                         <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘."><span class="gs-ico" data-icon="sparkle" data-icon-size="14"></span> 럭셔리</button>
                     </div>
                 </div>
