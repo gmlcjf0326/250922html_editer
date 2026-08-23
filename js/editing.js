@@ -582,6 +582,118 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.saveToHistory(`${tagName} 요소 추가`, true);
     },
 
+    // ---------- 요소 클립보드 (Ctrl+C/X/V) ----------
+
+    // 복사본에서 에디터 흔적(선택 클래스·오버레이)을 걷어낸다
+    cleanElementCopy(element) {
+        const clone = element.cloneNode(true);
+        const classes = this.getEditorClasses().filter(cls => cls !== 'editable-text' && cls !== 'editing');
+        [clone, ...clone.querySelectorAll('*')].forEach(node => {
+            classes.forEach(cls => node.classList && node.classList.remove(cls));
+            if (node.getAttribute && !node.getAttribute('class')) node.removeAttribute('class');
+        });
+        clone.querySelectorAll('[data-editor-ui]').forEach(node => node.remove());
+        return clone.outerHTML;
+    },
+
+    copySelectedElements() {
+        const targets = this.getBatchTargets();
+        if (targets.length === 0) return false;
+
+        // 다중 선택은 문서 순서대로 — 붙여넣었을 때 순서가 뒤집히지 않게
+        const doc = targets[0].ownerDocument;
+        const ordered = targets.slice().sort((a, b) =>
+            (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+
+        this.elementClipboard = ordered.map(el => this.cleanElementCopy(el));
+
+        // OS 클립보드에도 HTML 텍스트로 실어 둔다 (실패해도 내부 클립보드는 동작)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(this.elementClipboard.join('\n')).catch(() => {});
+        }
+
+        this.showToast(`${ordered.length}개 요소를 복사했습니다. Ctrl+V 로 붙여넣으세요.`, 'success');
+        return true;
+    },
+
+    cutSelectedElements() {
+        if (!this.copySelectedElements()) return;
+        this.deleteElement();
+    },
+
+    pasteElements() {
+        if (!this.elementClipboard || this.elementClipboard.length === 0) {
+            this.showToast('붙여넣을 요소가 없습니다. 먼저 Ctrl+C 로 복사하세요.', 'warning');
+            return;
+        }
+
+        const doc = this.getPreviewDoc();
+        if (!doc || !doc.body) return;
+
+        const anchor = this.selectedElement && this.selectedElement.isConnected
+            ? this.selectedElement : null;
+
+        // 붙일 자리: 선택이 빈 컨테이너면 그 안에, 아니면 선택 바로 뒤에, 선택이 없으면 body 끝에
+        const anchorIsEmptyContainer = anchor
+            && GS_DROP_CONTAINERS.has(anchor.tagName)
+            && !Array.from(anchor.children).some(child =>
+                !child.classList.contains('editable-text') && !child.hasAttribute('data-editor-ui'));
+
+        let insertAfter = anchorIsEmptyContainer ? null : anchor;
+        let lastInserted = null;
+
+        this.elementClipboard.forEach(html => {
+            const tmp = doc.createElement('div');
+            tmp.innerHTML = html;
+            const node = tmp.firstElementChild;
+            if (!node) return;
+
+            if (anchorIsEmptyContainer && !lastInserted) {
+                anchor.appendChild(node);
+            } else if (insertAfter) {
+                insertAfter.parentNode.insertBefore(node, insertAfter.nextSibling);
+            } else if (lastInserted) {
+                lastInserted.parentNode.insertBefore(node, lastInserted.nextSibling);
+            } else {
+                doc.body.appendChild(node);
+            }
+
+            // 복사본에는 리스너가 없으므로 텍스트 편집 바인딩 재적용
+            node.querySelectorAll('.editable-text').forEach(span => this.bindEditableSpan(span));
+            if (node.classList.contains('editable-text')) this.bindEditableSpan(node);
+
+            insertAfter = node;
+            lastInserted = node;
+        });
+
+        if (lastInserted) {
+            this.selectElement(lastInserted);
+            this.saveToHistory('요소 붙여넣기', true);
+            this.showToast('붙여넣었습니다.', 'success');
+        }
+    },
+
+    // Enter/F2 — 선택 요소의 첫 텍스트로 바로 편집 진입
+    enterTextEditMode() {
+        const el = this.selectedElement;
+        if (!el) return;
+
+        const span = el.classList.contains('editable-text') ? el : el.querySelector('.editable-text');
+        if (!span) {
+            this.showToast('이 요소에는 편집할 텍스트가 없습니다.', 'info');
+            return;
+        }
+
+        span.focus();
+        const doc = span.ownerDocument;
+        const range = doc.createRange();
+        range.selectNodeContents(span);
+        range.collapse(false); // 커서를 끝으로
+        const sel = doc.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    },
+
     duplicateElement() {
         const targets = this.getBatchTargets();
         if (targets.length === 0) return;

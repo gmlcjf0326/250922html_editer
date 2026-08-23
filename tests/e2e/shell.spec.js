@@ -242,4 +242,110 @@ test.describe('에디터 셸 (시작 화면 · 패널 · 단축키)', () => {
     });
     expect(consistent).toBe(true);
   });
+
+  // ---------- 클립보드 · 키보드 편의 (Ctrl+C/X/V · Esc 단계 해제 · Enter 편집) ----------
+
+  test('Ctrl+C / Ctrl+V 로 요소를 복사해 선택 뒤에 붙인다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.querySelector('p.note'));
+    });
+
+    await page.keyboard.press('Control+c');
+    await page.keyboard.press('Control+v');
+
+    const result = await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const notes = doc.querySelectorAll('p.note');
+      return {
+        count: notes.length,
+        pastedSelected: window.htmlEditor.selectedElement === notes[1],
+        clipboardHtml: window.htmlEditor.elementClipboard[0],
+        editableBound: !!notes[1].querySelector('.editable-text'),
+      };
+    });
+    expect(result.count).toBe(4); // 원래 3 + 붙인 1
+    expect(result.pastedSelected).toBe(true);
+    // 클립보드 사본에는 에디터 흔적이 없어야 한다 (붙인 요소 자체는 곧바로 선택되므로 selected 클래스가 다시 붙는 게 정상)
+    expect(result.clipboardHtml).toContain('note');
+    expect(result.clipboardHtml).not.toContain('element-selected');
+    expect(result.editableBound).toBe(true);
+  });
+
+  test('Ctrl+X 잘라내기 후 다른 위치에 붙여넣으면 이동이 된다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.querySelector('h1'));
+    });
+    await page.keyboard.press('Control+x');
+    expect(await page.evaluate(() => !!document.getElementById('previewFrame')
+      .contentDocument.querySelector('h1'))).toBe(false);
+
+    // 빈 컨테이너를 선택하고 붙여넣으면 그 안으로 들어간다
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.getElementById('empty-box'));
+    });
+    await page.keyboard.press('Control+v');
+    expect(await page.evaluate(() => !!document.getElementById('previewFrame')
+      .contentDocument.querySelector('#empty-box > h1'))).toBe(true);
+  });
+
+  test('입력창에 포커스가 있으면 Ctrl+C 를 가로채지 않는다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.querySelector('p.note'));
+    });
+
+    await page.keyboard.press('Control+k'); // 팔레트 입력창에 포커스
+    await page.keyboard.press('Control+c');
+    // 요소 클립보드가 채워지지 않아야 한다 (브라우저 텍스트 복사에 양보)
+    expect(await page.evaluate(() => window.htmlEditor.elementClipboard.length)).toBe(0);
+    await page.keyboard.press('Escape');
+  });
+
+  test('Esc 는 단계적으로 해제한다: 다중 선택 → 단일 선택', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const editor = window.htmlEditor;
+      editor.selectElement(doc.querySelector('h1'));
+      doc.querySelectorAll('p.note').forEach(p => {
+        p.classList.add('element-multi-selected');
+        editor.selectedElements.push(p);
+      });
+    });
+
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => ({
+      multi: window.htmlEditor.selectedElements.length,
+      single: !!window.htmlEditor.selectedElement,
+    }))).toEqual({ multi: 0, single: true });
+
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => !!window.htmlEditor.selectedElement)).toBe(false);
+  });
+
+  test('Enter 로 선택 요소의 텍스트 편집에 바로 진입한다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      window.htmlEditor.selectElement(doc.querySelector('h1'));
+    });
+
+    await page.keyboard.press('Enter');
+    const state = await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const active = doc.activeElement;
+      return {
+        editing: !!active && active.classList.contains('editable-text'),
+        inH1: !!active && !!active.closest('h1'),
+      };
+    });
+    expect(state).toEqual({ editing: true, inH1: true });
+  });
+
 });

@@ -118,6 +118,10 @@ Object.assign(HTMLLiveEditor.prototype, {
             { icon: 'sparkle', title: 'AI 스타일 변환', desc: 'AI로 페이지 스타일을 변경합니다', kbd: '', run: () => this.showAIModal() },
             { icon: 'palette', title: '스타일 패널 열기', desc: '선택한 요소의 스타일을 편집합니다', kbd: '', run: () => this.showStylePanel() },
             { icon: 'copy', title: '요소 복제', desc: '선택한 요소를 복제합니다', kbd: 'Ctrl+D', run: () => this.duplicateElement() },
+            { icon: 'copy', title: '요소 복사', desc: '선택한 요소를 클립보드에 담습니다', kbd: 'Ctrl+C', run: () => this.copySelectedElements() },
+            { icon: 'copy', title: '요소 잘라내기', desc: '복사 후 원본을 삭제합니다', kbd: 'Ctrl+X', run: () => this.cutSelectedElements() },
+            { icon: 'paste', title: '요소 붙여넣기', desc: '복사한 요소를 선택 뒤에 붙입니다', kbd: 'Ctrl+V', run: () => this.pasteElements() },
+            { icon: 'type', title: '텍스트 편집 시작', desc: '선택 요소의 텍스트로 커서를 옮깁니다', kbd: 'Enter', run: () => this.enterTextEditMode() },
             { icon: 'trash', title: '요소 삭제', desc: '선택한 요소를 삭제합니다', kbd: 'Del', run: () => this.deleteElement() },
             { icon: 'package', title: 'div로 감싸기', desc: '선택한 요소를 div로 감쌉니다', kbd: '', run: () => this.wrapWithDiv() },
             { icon: 'unwrap', title: '감싸기 해제', desc: '선택한 요소의 자식을 밖으로 꺼냅니다', kbd: '', run: () => this.unwrapElement() },
@@ -402,7 +406,14 @@ Object.assign(HTMLLiveEditor.prototype, {
             this.closeSidePanels();
             this.closeEditorDropdown();
             this.hideSimilarDropdown();
-            if (!typing) this.clearMultiSelection();
+            if (!typing) {
+                // 단계적 해제: 다중 선택 먼저, 다음 Esc 에 단일 선택까지
+                if (this.selectedElements.length > 0) {
+                    this.clearMultiSelection();
+                } else if (this.selectedElement) {
+                    this.clearSelection();
+                }
+            }
             return;
         }
 
@@ -434,6 +445,27 @@ Object.assign(HTMLLiveEditor.prototype, {
                 event.preventDefault();
                 this.duplicateElement();
             }
+        } else if (event.ctrlKey && !event.shiftKey && (event.key === 'c' || event.key === 'C')) {
+            // Ctrl+C: 선택 요소 복사 (입력 중 텍스트 복사는 typing 가드가 이미 통과시켰다)
+            if (this.selectedElement || this.selectedElements.length > 0) {
+                event.preventDefault();
+                this.copySelectedElements();
+            }
+        } else if (event.ctrlKey && !event.shiftKey && (event.key === 'x' || event.key === 'X')) {
+            if (this.selectedElement || this.selectedElements.length > 0) {
+                event.preventDefault();
+                this.cutSelectedElements();
+            }
+        } else if (event.ctrlKey && !event.shiftKey && (event.key === 'v' || event.key === 'V')) {
+            if (this.elementClipboard && this.elementClipboard.length > 0) {
+                event.preventDefault();
+                this.pasteElements();
+            }
+        } else if ((event.key === 'Enter' || event.key === 'F2')
+            && !event.ctrlKey && !event.altKey && !event.shiftKey && this.selectedElement) {
+            // Enter/F2: 선택 요소의 텍스트 편집으로 바로 진입
+            event.preventDefault();
+            this.enterTextEditMode();
         } else if (event.ctrlKey && !event.shiftKey && (event.key === 'a' || event.key === 'A')) {
             // Ctrl+A: 선택 요소와 같은 태그 전체 선택
             if (this.selectedElement) {

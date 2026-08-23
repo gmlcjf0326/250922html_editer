@@ -42,6 +42,7 @@ class HTMLLiveEditor {
 
         // 스타일 패널 상태
         this.stylePanelOpen = false;
+        this.elementClipboard = []; // Ctrl+C/X/V 요소 클립보드 (outerHTML 목록)
 
         // AI 설정
         this.aiSettings = {
