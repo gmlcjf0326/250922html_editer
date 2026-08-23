@@ -8,7 +8,7 @@ module.exports = [
       globals: {
         window: 'readonly', document: 'readonly', navigator: 'readonly',
         localStorage: 'readonly', console: 'readonly', fetch: 'readonly',
-        setTimeout: 'readonly', clearTimeout: 'readonly', confirm: 'readonly',
+        setTimeout: 'readonly', clearTimeout: 'readonly', requestAnimationFrame: 'readonly', confirm: 'readonly',
         alert: 'readonly', Blob: 'readonly', URL: 'readonly', FileReader: 'readonly',
         NodeFilter: 'readonly', DOMParser: 'readonly', WeakSet: 'readonly',
         Event: 'readonly',

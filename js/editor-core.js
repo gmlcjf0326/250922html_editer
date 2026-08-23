@@ -333,6 +333,16 @@ class HTMLLiveEditor {
                 background: rgba(37, 99, 235, 0.05) !important;
                 outline: 2px dashed #2563eb !important;
             }
+            .drop-target-inside {
+                background: rgba(37, 99, 235, 0.08) !important;
+                outline: 2px dashed #2563eb !important;
+                outline-offset: -2px;
+            }
+            .drop-indicator-before,
+            .drop-indicator-after {
+                /* ::before/::after 삽입선이 static 요소에서도 보이도록 기준을 만든다 */
+                position: relative;
+            }
             .drop-indicator-before::before {
                 content: '';
                 position: absolute;
@@ -504,9 +514,9 @@ class HTMLLiveEditor {
         });
 
         // 요소 편집 관련 클래스 제거
-        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover, .element-dragging, .drop-target-highlight, .element-multi-selected, .element-similar-preview');
+        const selectedElements = clonedDoc.querySelectorAll('.element-selected, .element-hover, .element-dragging, .drop-target-highlight, .drop-target-inside, .drop-indicator-before, .drop-indicator-after, .element-multi-selected, .element-similar-preview');
         selectedElements.forEach(element => {
-            element.classList.remove('element-selected', 'element-hover', 'element-dragging', 'drop-target-highlight', 'element-multi-selected', 'element-similar-preview');
+            element.classList.remove('element-selected', 'element-hover', 'element-dragging', 'drop-target-highlight', 'drop-target-inside', 'drop-indicator-before', 'drop-indicator-after', 'element-multi-selected', 'element-similar-preview');
             if (!element.getAttribute('class')) {
                 element.removeAttribute('class');
             }

@@ -102,7 +102,15 @@ Object.assign(HTMLLiveEditor.prototype, {
     },
 
     getEditorClasses() {
-        return ['element-selected', 'element-hover', 'element-multi-selected', 'element-dragging', 'element-similar-preview', 'drop-target-highlight', 'editable-text', 'editing'];
+        return ['element-selected', 'element-hover', 'element-multi-selected', 'element-dragging', 'element-similar-preview', 'drop-target-highlight', 'drop-target-inside', 'editable-text', 'editing'];
+    },
+
+    // "p.note" 형태의 짧은 설명 — 드래그 가이드처럼 사람이 읽는 자리용
+    describeElementBrief(element) {
+        if (!element || !element.tagName) return '';
+        const tag = element.tagName.toLowerCase();
+        const classes = this.getContentClasses(element).slice(0, 2);
+        return tag + (classes.length ? '.' + classes.join('.') : '');
     },
 
     getContentClasses(element) {

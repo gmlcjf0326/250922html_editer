@@ -382,6 +382,11 @@ Object.assign(HTMLLiveEditor.prototype, {
 
         // Escape: 어디서든 열린 UI 닫기 (텍스트 편집 중이면 편집 종료)
         if (event.key === 'Escape') {
+            // 드래그 중이면 드롭 없이 취소가 최우선
+            if (this.isDragging) {
+                this.cancelDrag();
+                return;
+            }
             if (inEditableSpan) {
                 event.target.closest('.editable-text').blur();
             }

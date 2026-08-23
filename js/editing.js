@@ -1,5 +1,12 @@
 // 요소 편집 — 드래그 앤 드롭, 구조 변경(감싸기·꺼내기·태그 변경), 추가·복제·삭제, 테이블
 
+// "안에 넣기" 드롭을 허용하는 컨테이너 태그.
+// 인라인·텍스트 요소(p, span, h1 …)는 안에 블록을 넣으면 마크업이 어색해지므로 제외한다.
+const GS_DROP_CONTAINERS = new Set([
+    'DIV', 'SECTION', 'ARTICLE', 'ASIDE', 'MAIN', 'HEADER', 'FOOTER', 'NAV',
+    'UL', 'OL', 'LI', 'TD', 'TH', 'FIGURE', 'BLOCKQUOTE', 'FORM', 'FIELDSET', 'DETAILS',
+]);
+
 Object.assign(HTMLLiveEditor.prototype, {
     setupDragAndDrop(doc) {
         if (!doc || !doc.body) return;
@@ -12,8 +19,11 @@ Object.assign(HTMLLiveEditor.prototype, {
             const target = this.findEditableTarget(e.target);
             if (!target) return;
 
-            // 텍스트 편집 중이면 드래그 시작하지 않음
-            if (e.target.classList.contains('editable-text') && e.target.isContentEditable) {
+            // 실제로 편집 중(포커스된 스팬)일 때만 드래그를 막는다.
+            // 스팬은 상시 contenteditable 이라 isContentEditable 로 거르면
+            // 글자 위에서는 드래그가 영영 시작되지 않는다 — 버튼처럼 텍스트가
+            // 면적 대부분인 요소는 통째로 드래그 불가였다.
+            if (e.target.classList.contains('editable-text') && e.target.classList.contains('editing')) {
                 return;
             }
 
@@ -63,6 +73,15 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.isDragging = true;
         this.draggedElement = element;
 
+        // 드래그로 전환됐으니 텍스트 편집 흔적(포커스·선택 영역)은 정리한다
+        const doc = element.ownerDocument;
+        const active = doc.activeElement;
+        if (active && active.classList && active.classList.contains('editable-text')) {
+            active.blur();
+        }
+        const sel = doc.getSelection && doc.getSelection();
+        if (sel) sel.removeAllRanges();
+
         // 드래그 중인 요소 스타일 변경
         element.classList.add('element-dragging');
 
@@ -72,8 +91,24 @@ Object.assign(HTMLLiveEditor.prototype, {
         this.dragGhost.style.display = 'block';
 
         this.updateGhostPosition(e);
+        this.startDragAutoScroll();
 
         console.log('🎯 드래그 시작:', element.tagName);
+    },
+
+    // 드래그 중 가장자리 자동 스크롤 — mousemove 는 마우스가 멈추면 안 오므로 rAF 루프가 스크롤을 맡는다
+    startDragAutoScroll() {
+        this.dragScrollDir = 0;
+        const step = () => {
+            if (!this.isDragging) return; // 드래그가 끝나면 루프도 끝
+            if (this.dragScrollDir) {
+                const doc = this.getPreviewDoc();
+                const scroller = doc && (doc.scrollingElement || doc.documentElement);
+                if (scroller) scroller.scrollTop += this.dragScrollDir * 14;
+            }
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
     },
 
     handleDragMove(e, doc) {
@@ -98,21 +133,21 @@ Object.assign(HTMLLiveEditor.prototype, {
             // 자기 자신의 자손에게는 드롭 불가 (insertBefore가 HierarchyRequestError로 크래시)
             if (this.draggedElement.contains(el)) continue;
             if (el.classList.contains('editable-text')) continue;
+            if (el.closest('[data-editor-ui]')) continue; // 편집용 오버레이는 드롭 대상이 아니다
             if (['HTML', 'HEAD', 'BODY', 'SCRIPT', 'STYLE'].includes(el.tagName)) continue;
 
-            // 유효한 드롭 타겟 찾음
-            const rect = el.getBoundingClientRect();
-            const relativeY = y - rect.top;
-            const threshold = rect.height / 2;
-
             newDropTarget = el;
-            newDropPosition = relativeY < threshold ? 'before' : 'after';
+            newDropPosition = this.resolveDropPosition(el, y);
             break;
         }
 
+        // 상/하단 가장자리에 가까우면 자동 스크롤 (rAF 루프가 방향만 읽는다)
+        const viewH = doc.defaultView.innerHeight;
+        this.dragScrollDir = y < 48 ? -1 : (y > viewH - 48 ? 1 : 0);
+
         // 이전 하이라이트 제거
         if (this.dropTarget && this.dropTarget !== newDropTarget) {
-            this.dropTarget.classList.remove('drop-target-highlight', 'drop-indicator-before', 'drop-indicator-after');
+            this.dropTarget.classList.remove('drop-target-highlight', 'drop-target-inside', 'drop-indicator-before', 'drop-indicator-after');
         }
 
         // 새 하이라이트 적용
@@ -120,28 +155,57 @@ Object.assign(HTMLLiveEditor.prototype, {
             this.dropTarget = newDropTarget;
             this.dropPosition = newDropPosition;
 
-            newDropTarget.classList.add('drop-target-highlight');
+            newDropTarget.classList.toggle('drop-target-inside', newDropPosition === 'inside');
+            newDropTarget.classList.toggle('drop-target-highlight', newDropPosition !== 'inside');
 
             // 드롭 가이드 라인 표시
             this.showDropGuide(newDropTarget, newDropPosition, iframeRect);
         } else {
+            this.dropTarget = null;
+            this.dropPosition = null;
             this.dragGuide.style.display = 'none';
         }
     },
 
+    // 드롭 위치 판정: 위 30% = 앞, 아래 30% = 뒤, 가운데 40%는 컨테이너라면 "안에 넣기".
+    // 빈 컨테이너는 어느 지점이든 안에 넣기 — before/after 로는 빈 div 를 영영 못 채운다.
+    resolveDropPosition(el, pointerY) {
+        const rect = el.getBoundingClientRect();
+        const relativeY = pointerY - rect.top;
+
+        if (GS_DROP_CONTAINERS.has(el.tagName)) {
+            const hasContentChildren = Array.from(el.children).some(child =>
+                !child.classList.contains('editable-text') && !child.hasAttribute('data-editor-ui'));
+            if (!hasContentChildren) return 'inside';
+            if (relativeY >= rect.height * 0.3 && relativeY <= rect.height * 0.7) return 'inside';
+        }
+
+        return relativeY < rect.height / 2 ? 'before' : 'after';
+    },
+
     showDropGuide(target, position, iframeRect) {
         const rect = target.getBoundingClientRect();
+        const line = this.dragGuide.querySelector('.drag-guide-line');
+        const text = this.dragGuide.querySelector('.drag-guide-text');
+        const desc = this.describeElementBrief(target);
 
         this.dragGuide.style.display = 'block';
         this.dragGuide.style.left = (iframeRect.left + rect.left) + 'px';
         this.dragGuide.style.width = rect.width + 'px';
 
-        if (position === 'before') {
+        if (position === 'inside') {
+            // 안에 넣기: 대상 전체가 채움 하이라이트되므로 선은 숨기고 라벨만 안쪽 상단에
+            line.style.display = 'none';
+            this.dragGuide.style.top = (iframeRect.top + rect.top + 6) + 'px';
+            text.textContent = `${desc} 안에 넣기`;
+        } else if (position === 'before') {
+            line.style.display = 'block';
             this.dragGuide.style.top = (iframeRect.top + rect.top - 2) + 'px';
-            this.dragGuide.querySelector('.drag-guide-text').textContent = '↑ 이 위치에 삽입';
+            text.textContent = `↑ ${desc} 앞에 삽입`;
         } else {
+            line.style.display = 'block';
             this.dragGuide.style.top = (iframeRect.top + rect.bottom - 2) + 'px';
-            this.dragGuide.querySelector('.drag-guide-text').textContent = '↓ 이 위치에 삽입';
+            text.textContent = `↓ ${desc} 뒤에 삽입`;
         }
     },
 
@@ -161,13 +225,24 @@ Object.assign(HTMLLiveEditor.prototype, {
             this.performDrop();
         }
 
-        // 정리
+        this.cleanupDrag();
+        console.log('🎯 드래그 종료');
+    },
+
+    // Esc 로 드래그 취소 — 드롭 없이 정리만
+    cancelDrag() {
+        if (!this.isDragging) return;
+        this.cleanupDrag();
+        this.showToast('드래그를 취소했습니다.', 'info');
+    },
+
+    cleanupDrag() {
         if (this.draggedElement) {
             this.draggedElement.classList.remove('element-dragging');
         }
 
         if (this.dropTarget) {
-            this.dropTarget.classList.remove('drop-target-highlight', 'drop-indicator-before', 'drop-indicator-after');
+            this.dropTarget.classList.remove('drop-target-highlight', 'drop-target-inside', 'drop-indicator-before', 'drop-indicator-after');
         }
 
         this.dragGuide.style.display = 'none';
@@ -175,22 +250,25 @@ Object.assign(HTMLLiveEditor.prototype, {
 
         this.isDragging = false;
         this.draggedElement = null;
+        this.potentialDragElement = null;
         this.dropTarget = null;
         this.dropPosition = null;
-
-        console.log('🎯 드래그 종료');
+        this.dragScrollDir = 0;
     },
 
     performDrop() {
         if (!this.draggedElement || !this.dropTarget) return;
         if (this.draggedElement.contains(this.dropTarget)) return;
 
-        const parent = this.dropTarget.parentNode;
-
-        if (this.dropPosition === 'before') {
-            parent.insertBefore(this.draggedElement, this.dropTarget);
+        if (this.dropPosition === 'inside') {
+            this.dropTarget.appendChild(this.draggedElement);
         } else {
-            parent.insertBefore(this.draggedElement, this.dropTarget.nextSibling);
+            const parent = this.dropTarget.parentNode;
+            if (this.dropPosition === 'before') {
+                parent.insertBefore(this.draggedElement, this.dropTarget);
+            } else {
+                parent.insertBefore(this.draggedElement, this.dropTarget.nextSibling);
+            }
         }
 
         // 요소 다시 선택

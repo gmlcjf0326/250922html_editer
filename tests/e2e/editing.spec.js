@@ -176,4 +176,142 @@ test.describe('편집 동작 (선택 · 구조 · 히스토리)', () => {
     expect(await page.evaluate(() => document.getElementById('stylePanel').style.display)).not.toBe('none');
     expect(await inlineStyle(page, 'li', 'color')).toBe('');
   });
+
+  // ---------- 드래그 앤 드롭 가이드 (3구역 · 라벨 · 취소 · 자동 스크롤) ----------
+  //
+  // 주의: 실제 마우스(page.mouse)로는 검증할 수 없다. 버튼을 누른 채의 이동을
+  // CDP 가 sandbox iframe(allow-scripts 없음)으로 보내면 응답이 돌아오지 않아
+  // mouse.move 가 영원히 멈춘다 — 드래그 로직을 전부 꺼도 재현되는 브라우저 계층
+  // 문제다. 그래서 앱이 실제로 듣는 doc.body 리스너에 합성 이벤트를 보낸다.
+
+  /** iframe 문서 좌표 기준으로 합성 마우스 이벤트를 보낸다 */
+  function fireMouse(page, type, x, y) {
+    return page.evaluate(([type, x, y]) => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      const target = doc.elementFromPoint(x, y) || doc.body;
+      target.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0,
+      }));
+    }, [type, x, y]);
+  }
+
+  /** 요소 중심의 iframe 문서 좌표 */
+  function centerOf(page, selector) {
+    return page.evaluate((sel) => {
+      const r = document.getElementById('previewFrame').contentDocument
+        .querySelector(sel).getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, selector);
+  }
+
+  async function startSyntheticDrag(page, fromSel) {
+    const from = await centerOf(page, fromSel);
+    await fireMouse(page, 'mousedown', from.x, from.y);
+    await fireMouse(page, 'mousemove', from.x + 12, from.y); // 5px 임계값 통과
+    return from;
+  }
+
+  test('빈 컨테이너 안으로 드롭할 수 있고 가이드가 "안에 넣기"를 알려준다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+
+    await startSyntheticDrag(page, 'p.note');
+    const to = await centerOf(page, '#empty-box');
+    await fireMouse(page, 'mousemove', to.x, to.y);
+
+    // 드롭 전 상태: inside 하이라이트 + 대상 이름이 든 라벨
+    const midDrag = await page.evaluate(() => ({
+      insideClass: document.getElementById('previewFrame').contentDocument
+        .getElementById('empty-box').classList.contains('drop-target-inside'),
+      guide: document.getElementById('dragGuide').textContent,
+    }));
+    expect(midDrag.insideClass).toBe(true);
+    expect(midDrag.guide).toContain('div 안에 넣기');
+
+    await fireMouse(page, 'mouseup', to.x, to.y);
+    const landed = await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      return {
+        inBox: !!doc.querySelector('#empty-box p.note'),
+        leftover: doc.getElementById('empty-box').className,
+      };
+    });
+    expect(landed.inBox).toBe(true);
+    expect(landed.leftover).not.toContain('drop-target');
+  });
+
+  test('자식이 있는 컨테이너도 가운데 존의 빈 영역에서는 안으로 넣는다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+
+    await startSyntheticDrag(page, 'button');
+    // tall-box(120px)의 위쪽 60% 지점 — 자식 p 아래의 빈 영역이자 가운데 40% 존
+    const to = await page.evaluate(() => {
+      const r = document.getElementById('previewFrame').contentDocument
+        .getElementById('tall-box').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height * 0.6 };
+    });
+    await fireMouse(page, 'mousemove', to.x, to.y);
+    await fireMouse(page, 'mouseup', to.x, to.y);
+
+    expect(await page.evaluate(() => !!document.getElementById('previewFrame')
+      .contentDocument.querySelector('#tall-box > button'))).toBe(true);
+  });
+
+  test('드롭 가이드 라벨이 대상 이름을 포함한다 (p.note 앞에 삽입)', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+
+    await startSyntheticDrag(page, 'button');
+    const target = await page.evaluate(() => {
+      const r = document.getElementById('previewFrame').contentDocument
+        .querySelectorAll('p.note')[1].getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + 2 }; // 위 30% 존 → before
+    });
+    await fireMouse(page, 'mousemove', target.x, target.y);
+
+    expect(await page.evaluate(() => document.getElementById('dragGuide').textContent))
+      .toContain('p.note 앞에 삽입');
+    await fireMouse(page, 'mouseup', target.x, target.y);
+  });
+
+  test('Escape 로 드래그를 취소하면 DOM 이 변하지 않는다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    const before = await page.evaluate(() =>
+      document.getElementById('previewFrame').contentDocument.getElementById('wrap').innerHTML);
+
+    await startSyntheticDrag(page, 'p.note');
+    const to = await centerOf(page, '#empty-box');
+    await fireMouse(page, 'mousemove', to.x, to.y);
+    await page.keyboard.press('Escape');
+    await fireMouse(page, 'mouseup', to.x, to.y);
+
+    const after = await page.evaluate(() => ({
+      wrap: document.getElementById('previewFrame').contentDocument.getElementById('wrap').innerHTML,
+      dragging: window.htmlEditor.isDragging,
+      inBox: !!document.getElementById('previewFrame').contentDocument.querySelector('#empty-box p'),
+    }));
+    expect(after.dragging).toBe(false);
+    expect(after.inBox).toBe(false);
+    expect(after.wrap).toBe(before);
+  });
+
+  test('드래그 중 하단 가장자리에서 문서가 자동 스크롤된다', async ({ page }) => {
+    await openEditor(page, 'editing.html');
+    await page.evaluate(() => {
+      const doc = document.getElementById('previewFrame').contentDocument;
+      doc.body.style.height = '3000px'; // 스크롤이 생기도록 늘린다
+    });
+
+    const from = await startSyntheticDrag(page, 'p.note');
+    const viewH = await page.evaluate(() => document.getElementById('previewFrame')
+      .contentDocument.defaultView.innerHeight);
+    await fireMouse(page, 'mousemove', from.x, viewH - 10); // 하단 가장자리
+
+    await expect
+      .poll(() => page.evaluate(() => {
+        const doc = document.getElementById('previewFrame').contentDocument;
+        return (doc.scrollingElement || doc.documentElement).scrollTop;
+      }))
+      .toBeGreaterThan(0);
+    await fireMouse(page, 'mouseup', from.x, viewH - 10);
+  });
+
 });
