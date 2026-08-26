@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HTML Live Editor Pro</title>
     <link rel="stylesheet" href="style.css">
+    <script>
+        // 첫 페인트 전에 테마를 적용한다. 부트스트랩(initTheme)까지 기다리면
+        // 다크 모드로 열 때 흰 화면이 한 번 번쩍인 뒤 어두워진다.
+        try {
+            if (localStorage.getItem('editorTheme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) { /* 스토리지 접근이 막힌 환경에서는 기본 테마로 둔다 */ }
+    </script>
 </head>
 <body>
     <input type="file" id="fileInput" accept=".html,.htm" style="display: none;">
@@ -12,15 +21,27 @@
     <!-- 파일 업로드 초기 화면 -->
     <div class="upload-screen" id="uploadScreen">
         <div class="upload-container">
-            <div class="upload-icon">📄</div>
+            <div class="upload-icon"><span class="gs-ico" data-icon="file" data-icon-size="40"></span></div>
             <h1>HTML Live Editor Pro</h1>
-            <p>최고의 HTML 편집 경험 — 템플릿, 아이콘 에셋, 외부 에디터 연동까지 한 번에</p>
+            <p>클릭 한 번으로 요소를 고르고, 스타일 인스펙터로 글꼴·색상·여백·배치까지 정밀하게</p>
+
+            <div class="restore-card" id="restoreCard" style="display: none;">
+                <span class="restore-icon"><span class="gs-ico" data-icon="clock" data-icon-size="18"></span></span>
+                <div class="restore-info">
+                    <div><strong id="restoreName"></strong> <span id="restoreTime" class="restore-time"></span></div>
+                    <small>마지막 편집의 자동 백업 — 새 문서를 열면 덮어써지는 안전망입니다</small>
+                </div>
+                <div class="restore-actions">
+                    <button id="restoreOpenBtn" class="btn btn-primary">이어서 편집</button>
+                    <button id="restoreDismissBtn" class="restore-dismiss" title="백업 삭제">삭제</button>
+                </div>
+            </div>
 
             <div class="drop-zone" id="dropZone">
                 <div class="drop-zone-content">
                     <h3>HTML 파일을 여기에 드래그하거나</h3>
                     <button id="uploadBtn" class="btn btn-primary">
-                        📁 HTML 파일 선택
+                        <span class="gs-ico" data-icon="folder"></span> HTML 파일 선택
                     </button>
                     <small>지원 형식: .html, .htm</small>
                 </div>
@@ -28,28 +49,20 @@
 
             <div class="start-options">
                 <button class="start-option-btn" id="startBlankBtn">
-                    <span class="icon">✨</span>
+                    <span class="icon"><span class="gs-ico" data-icon="file-plus" data-icon-size="22"></span></span>
                     <div>빈 페이지에서 시작</div>
                 </button>
-                <button class="start-option-btn" id="startSampleBtn">
-                    <span class="icon">🎨</span>
-                    <div>샘플 템플릿으로 시작</div>
-                </button>
                 <button class="start-option-btn" id="startPickBtn">
-                    <span class="icon">📂</span>
+                    <span class="icon"><span class="gs-ico" data-icon="folder" data-icon-size="22"></span></span>
                     <div>로컬 파일 열기 (Chromium)</div>
                 </button>
             </div>
 
-            <div class="recent-files" id="recentFiles" style="display:none;">
-                <h4>최근 파일</h4>
-                <div id="recentFilesList"></div>
-            </div>
         </div>
     </div>
 
-    <!-- 전체화면 iframe -->
-    <iframe id="previewFrame" class="fullscreen-frame" style="display: none;"></iframe>
+    <!-- 전체화면 iframe (기본적으로 문서 내 스크립트 실행 차단 — 로드 시 사용자 동의로 허용 가능) -->
+    <iframe id="previewFrame" class="fullscreen-frame" sandbox="allow-same-origin" style="display: none;"></iframe>
 
     <!-- 드래그 가이드 라인 -->
     <div class="drag-guide" id="dragGuide" style="display: none;">
@@ -65,88 +78,73 @@
         <!-- 왼쪽 파일 정보 -->
         <div class="file-info" id="fileInfo">
             <span id="fileName" class="file-name"></span>
-            <span id="modeIndicator" class="mode-indicator">🔧 요소편집</span>
+            <span id="modeIndicator" class="mode-indicator"><span class="gs-ico" data-icon="wrench" data-icon-size="13"></span> 요소편집</span>
             <span id="selectionCount" class="selection-count" style="display: none;">0개 선택</span>
         </div>
 
         <!-- 오른쪽 버튼들 -->
         <div class="action-buttons">
-            <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)">⌘</button>
-            <button id="templatesBtn" class="gs-toolbar-btn" title="템플릿 라이브러리">🧩 템플릿</button>
-            <button id="assetsBtn" class="gs-toolbar-btn" title="에셋 팔레트 (아이콘·이미지·그라디언트)">🎨 에셋</button>
-            <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인">🕐</button>
+            <button id="commandPaletteBtn" class="gs-icon-btn" title="명령 팔레트 (Ctrl+K)"><span class="gs-ico" data-icon="command"></span></button>
+            <button id="treeBtn" class="gs-icon-btn" title="요소 트리 (Ctrl+E)"><span class="gs-ico" data-icon="layers"></span></button>
+            <button id="historyBtn" class="gs-icon-btn" title="히스토리 타임라인"><span class="gs-ico" data-icon="clock"></span></button>
 
             <span class="gs-divider"></span>
 
             <!-- 원본 편집 드롭다운 -->
             <div class="gs-dropdown" id="openInEditorDropdown">
                 <button class="gs-toolbar-btn" id="openInEditorBtn" title="외부 에디터 / 브라우저 내장 에디터로 원본 열기 (Ctrl+Shift+O)">
-                    💻 원본 편집 <span class="chev">▾</span>
+                    <span class="gs-ico" data-icon="code" data-icon-size="15"></span> 원본 편집 <span class="chev"><span class="gs-ico" data-icon="chevron" data-icon-size="12"></span></span>
                 </button>
                 <div class="gs-dropdown-menu">
                     <div class="gs-dropdown-section">외부 에디터 (URL 스킴)</div>
                     <div class="gs-dropdown-item" data-editor="vscode">
-                        <span>🆚</span> VS Code 로 열기
+                        <span class="gs-ico" data-icon="code"></span> VS Code 로 열기
                     </div>
                     <div class="gs-dropdown-item" data-editor="cursor">
-                        <span>✨</span> Cursor 로 열기
+                        <span class="gs-ico" data-icon="sparkle"></span> Cursor 로 열기
                     </div>
                     <div class="gs-dropdown-item" data-editor="sublime">
-                        <span>🟠</span> Sublime Text
+                        <span class="gs-ico" data-icon="square"></span> Sublime Text
                     </div>
                     <div class="gs-dropdown-item" data-editor="webstorm">
-                        <span>🟣</span> WebStorm / JetBrains
+                        <span class="gs-ico" data-icon="diamond"></span> WebStorm / JetBrains
                     </div>
-                    <div class="gs-dropdown-divider"></div>
-                    <div class="gs-dropdown-item" data-editor="monaco">
-                        <span>🧠</span> 브라우저 내장 Monaco
-                        <span class="kbd">Ctrl+Shift+O</span>
-                    </div>
-                    <div class="gs-dropdown-divider"></div>
                     <div class="gs-dropdown-item" data-editor="set-path">
-                        <span>📁</span> 로컬 경로 설정…
+                        <span class="gs-ico" data-icon="folder"></span> 로컬 경로 설정…
                     </div>
                 </div>
             </div>
 
             <button id="aiStyleBtn" class="gs-toolbar-btn" title="AI 스타일 변환">
-                🤖 AI
+                <span class="gs-ico" data-icon="sparkle" data-icon-size="15"></span> AI
             </button>
             <button id="downloadBtn" class="gs-toolbar-btn primary" title="편집된 HTML 다운로드">
-                📥 다운로드
+                <span class="gs-ico" data-icon="download" data-icon-size="15"></span> 다운로드
             </button>
 
             <span class="gs-divider"></span>
 
-            <button id="undoBtn" class="gs-icon-btn" title="되돌리기 (Ctrl+Z)" disabled>↶</button>
-            <button id="redoBtn" class="gs-icon-btn" title="다시실행 (Ctrl+Y)" disabled>↷</button>
-            <button id="shortcutBtn" class="gs-icon-btn" title="단축키 가이드 (?)">?</button>
-            <button id="themeToggleBtn" class="gs-icon-btn" title="다크 / 라이트 테마">🌙</button>
+            <button id="undoBtn" class="gs-icon-btn" title="되돌리기 (Ctrl+Z)" disabled><span class="gs-ico" data-icon="undo"></span></button>
+            <button id="redoBtn" class="gs-icon-btn" title="다시실행 (Ctrl+Y)" disabled><span class="gs-ico" data-icon="redo"></span></button>
+            <button id="shortcutBtn" class="gs-icon-btn" title="단축키 가이드 (?)"><span class="gs-ico" data-icon="help"></span></button>
+            <button id="themeToggleBtn" class="gs-icon-btn" title="다크 / 라이트 테마"><span class="gs-ico" data-icon="moon"></span></button>
         </div>
     </div>
 
     <!-- 반응형 뷰포트 스위처 -->
     <div class="viewport-switcher" id="viewportSwitcher" style="display: none;">
         <button class="viewport-btn active" data-viewport="full" title="전체 화면">
-            🖥 <span class="viewport-size-label">전체</span>
+            <span class="gs-ico" data-icon="maximize" data-icon-size="14"></span> <span class="viewport-size-label">전체</span>
         </button>
         <button class="viewport-btn" data-viewport="desktop" title="데스크톱 1440">
-            💻 <span class="viewport-size-label">1440</span>
+            <span class="gs-ico" data-icon="monitor" data-icon-size="14"></span> <span class="viewport-size-label">1440</span>
         </button>
         <button class="viewport-btn" data-viewport="tablet" title="태블릿 768">
-            📱 <span class="viewport-size-label">768</span>
+            <span class="gs-ico" data-icon="tablet" data-icon-size="14"></span> <span class="viewport-size-label">768</span>
         </button>
         <button class="viewport-btn" data-viewport="mobile" title="모바일 375">
-            📱 <span class="viewport-size-label">375</span>
+            <span class="gs-ico" data-icon="phone" data-icon-size="14"></span> <span class="viewport-size-label">375</span>
         </button>
-    </div>
-
-    <!-- 자동 저장 복구 배너 -->
-    <div class="autosave-banner" id="autosaveBanner" style="display: none;">
-        <span>⏱</span>
-        <span><strong>자동 저장본</strong>이 발견됐습니다. <span id="autosaveTime"></span></span>
-        <button class="gs-toolbar-btn primary" id="autosaveRestoreBtn">복구</button>
-        <button class="gs-toolbar-btn" id="autosaveDismissBtn">무시</button>
     </div>
 
     <!-- DOM 네비게이터 (브레드크럼) -->
@@ -160,182 +158,679 @@
         </div>
     </div>
 
-    <!-- 다중 선택 영역 박스 -->
-    <div class="selection-box" id="selectionBox" style="display: none;"></div>
-
-    <!-- CSS 스타일 패널 -->
+    <!-- 스타일 인스펙터 패널 -->
     <div class="style-panel" id="stylePanel" style="display: none;">
         <div class="style-panel-header">
-            <h3>🎨 스타일 편집</h3>
+            <h3>스타일 편집</h3>
             <button class="style-panel-close" id="stylePanelClose">×</button>
         </div>
 
+        <!-- 현재 편집 대상 -->
+        <div class="sp-target" id="spTarget">
+            <span class="sp-target-tag" id="spTargetTag">-</span>
+            <span class="sp-target-path" id="spTargetPath"></span>
+            <span class="sp-target-count" id="spTargetCount" style="display:none;"></span>
+        </div>
+
+        <div class="sp-tabs" id="spTabs">
+            <button class="sp-tab active" data-pane="structure" title="요소 구조 · 이동 · 태그"><span class="gs-ico" data-icon="layers" data-icon-size="14"></span> 구조</button>
+            <button class="sp-tab" data-pane="text" title="글꼴 · 색상 · 정렬"><span class="gs-ico" data-icon="type" data-icon-size="14"></span> 텍스트</button>
+            <button class="sp-tab" data-pane="box" title="크기 · 여백 · 테두리"><span class="gs-ico" data-icon="box" data-icon-size="14"></span> 박스</button>
+            <button class="sp-tab" data-pane="fill" title="배경 · 그림자 · 투명도"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 배경</button>
+            <button class="sp-tab" data-pane="layout" title="정렬 · Flex · 위치"><span class="gs-ico" data-icon="layout" data-icon-size="14"></span> 배치</button>
+            <button class="sp-tab" data-pane="doc" title="문서 전체에 글꼴 · 팔레트 · 타이포 일괄 적용"><span class="gs-ico" data-icon="file" data-icon-size="14"></span> 문서</button>
+        </div>
+
         <div class="style-panel-content">
-            <!-- 배경색 -->
-            <div class="style-section">
-                <label class="style-label">배경색</label>
-                <div class="style-row">
-                    <input type="color" id="bgColor" class="color-picker" value="#ffffff">
-                    <input type="text" id="bgColorText" class="color-text" placeholder="#ffffff">
-                    <button class="style-btn-small" id="bgColorClear" title="배경색 제거">✕</button>
+
+            <!-- ===================== 구조 ===================== -->
+            <div class="sp-pane active" data-pane="structure">
+                <div class="style-section">
+                    <label class="style-label">선택 이동</label>
+                    <div class="sp-grid sp-grid-4">
+                        <button class="sp-btn" id="spSelParent" title="부모 요소 선택 (P)">↑ 부모</button>
+                        <button class="sp-btn" id="spSelChild" title="첫 자식 선택 (C)">↓ 자식</button>
+                        <button class="sp-btn" id="spSelPrev" title="이전 형제 (←)">← 이전</button>
+                        <button class="sp-btn" id="spSelNext" title="다음 형제 (→)">다음 →</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">요소 꺼내기 · 넣기</label>
+                    <div class="sp-grid sp-grid-2">
+                        <button class="sp-btn primary" id="spMoveOut" title="선택 요소를 부모 div 밖으로 꺼냅니다"><span class="gs-ico" data-icon="move-out" data-icon-size="14"></span> 부모 밖으로 빼기</button>
+                        <button class="sp-btn" id="spNestPrev" title="바로 앞 형제 요소 안으로 넣습니다"><span class="gs-ico" data-icon="move-in" data-icon-size="14"></span> 앞 요소 안으로</button>
+                        <button class="sp-btn" id="spWrapDiv" title="선택 요소를 새 div로 감쌉니다"><span class="gs-ico" data-icon="package" data-icon-size="14"></span> div로 감싸기</button>
+                        <button class="sp-btn" id="spUnwrap" title="이 요소를 없애고 내용만 남깁니다"><span class="gs-ico" data-icon="unwrap" data-icon-size="14"></span> 감싸기 해제</button>
+                    </div>
+                    <p class="sp-hint"><span class="gs-ico" data-icon="bulb" data-icon-size="14"></span> <strong>부모 밖으로 빼기</strong>는 div 안에 갇힌 요소를 한 단계 위로 꺼냅니다. <strong>감싸기 해제</strong>는 껍데기 div만 지우고 내용은 남깁니다.</p>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">순서 · 복제</label>
+                    <div class="sp-grid sp-grid-4">
+                        <button class="sp-btn" id="spMoveUp" title="위로 이동 (↑)">↑ 위로</button>
+                        <button class="sp-btn" id="spMoveDown" title="아래로 이동 (↓)">↓ 아래로</button>
+                        <button class="sp-btn" id="spDuplicate" title="복제 (Ctrl+D)"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</button>
+                        <button class="sp-btn danger" id="spDelete" title="삭제 (Delete)"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">태그 변경</label>
+                    <div class="style-row">
+                        <select id="spTagSelect" class="style-select sp-grow">
+                            <option value="">태그 유지</option>
+                            <option value="div">div</option>
+                            <option value="section">section</option>
+                            <option value="article">article</option>
+                            <option value="header">header</option>
+                            <option value="footer">footer</option>
+                            <option value="nav">nav</option>
+                            <option value="main">main</option>
+                            <option value="aside">aside</option>
+                            <option value="p">p</option>
+                            <option value="span">span</option>
+                            <option value="h1">h1</option>
+                            <option value="h2">h2</option>
+                            <option value="h3">h3</option>
+                            <option value="h4">h4</option>
+                            <option value="h5">h5</option>
+                            <option value="h6">h6</option>
+                            <option value="ul">ul</option>
+                            <option value="ol">ol</option>
+                            <option value="li">li</option>
+                            <option value="button">button</option>
+                            <option value="a">a</option>
+                            <option value="label">label</option>
+                            <option value="strong">strong</option>
+                            <option value="em">em</option>
+                            <option value="blockquote">blockquote</option>
+                        </select>
+                        <button class="style-btn-small" id="spTagApply" title="선택한 태그로 변경">적용</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">클래스 / ID</label>
+                    <div class="style-row">
+                        <span class="sp-prefix">.</span>
+                        <input type="text" id="spClassInput" class="sp-input sp-grow" placeholder="class (공백으로 구분)">
+                    </div>
+                    <div class="style-row">
+                        <span class="sp-prefix">#</span>
+                        <input type="text" id="spIdInput" class="sp-input sp-grow" placeholder="id">
+                        <button class="style-btn-small" id="spIdentityApply" title="클래스/ID 적용">적용</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">인라인 스타일</label>
+                    <div class="sp-grid sp-grid-3">
+                        <button class="sp-btn" id="spCopyStyle" title="이 요소의 인라인 스타일을 복사"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복사</button>
+                        <button class="sp-btn" id="spPasteStyle" title="복사한 스타일을 선택 요소에 적용"><span class="gs-ico" data-icon="paste" data-icon-size="14"></span> 붙여넣기</button>
+                        <button class="sp-btn danger" id="spResetStyle" title="이 요소의 인라인 스타일 전부 제거"><span class="gs-ico" data-icon="reset" data-icon-size="14"></span> 초기화</button>
+                    </div>
+                    <textarea id="spStyleText" class="sp-textarea" rows="3" placeholder="color: #333; padding: 8px;"></textarea>
+                    <button class="style-btn" id="spStyleTextApply">CSS 직접 적용</button>
                 </div>
             </div>
 
-            <!-- 그라데이션 -->
-            <div class="style-section">
-                <label class="style-label">그라데이션</label>
-                <div class="style-row">
-                    <input type="color" id="gradientStart" class="color-picker" value="#667eea">
-                    <span class="gradient-arrow">→</span>
-                    <input type="color" id="gradientEnd" class="color-picker" value="#764ba2">
-                    <select id="gradientDirection" class="style-select">
-                        <option value="to right">→</option>
-                        <option value="to left">←</option>
-                        <option value="to bottom">↓</option>
-                        <option value="to top">↑</option>
-                        <option value="to bottom right">↘</option>
-                        <option value="to bottom left">↙</option>
+            <!-- ===================== 텍스트 ===================== -->
+            <div class="sp-pane" data-pane="text">
+                <div class="style-section">
+                    <label class="style-label">글꼴</label>
+                    <div class="style-row">
+                        <select id="spFontFamily" class="style-select sp-grow" data-css="fontFamily">
+                            <option value="">기본값 (상속)</option>
+                            <option value="-apple-system, 'Segoe UI', sans-serif">시스템 기본</option>
+                            <option value="'Malgun Gothic', '맑은 고딕', sans-serif">맑은 고딕</option>
+                            <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                            <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                            <option value="'Nanum Myeongjo', serif">나눔명조</option>
+                            <option value="'Pretendard', sans-serif">Pretendard</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
+                            <option value="'Helvetica Neue', Helvetica, sans-serif">Helvetica</option>
+                            <option value="Georgia, serif">Georgia</option>
+                            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                            <option value="'Courier New', Courier, monospace">Courier New</option>
+                            <option value="'Roboto', sans-serif">Roboto</option>
+                            <option value="'Inter', sans-serif">Inter</option>
+                            <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                            <option value="Impact, fantasy">Impact</option>
+                            <option value="monospace">고정폭 (monospace)</option>
+                            <option value="serif">명조 (serif)</option>
+                            <option value="sans-serif">고딕 (sans-serif)</option>
+                        </select>
+                    </div>
+                    <div class="style-row">
+                        <input type="text" id="spFontCustom" class="sp-input sp-grow" placeholder="직접 입력: 'Pretendard', sans-serif">
+                        <button class="style-btn-small" id="spFontCustomApply" title="입력한 글꼴 적용">적용</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">글자 크기</label>
+                    <div class="style-row">
+                        <input type="range" id="spFontSizeRange" class="style-range" min="8" max="120" value="16" data-css="fontSize" data-unit="px" data-sync="spFontSize">
+                        <input type="number" id="spFontSize" class="style-input-small" value="16" min="1" max="400" data-css="fontSize" data-unit="px" data-sync="spFontSizeRange">
+                        <span class="style-unit">px</span>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">굵기 · 줄간격 · 자간</label>
+                    <div class="sp-grid sp-grid-3">
+                        <div class="sp-field">
+                            <label>굵기</label>
+                            <select id="spFontWeight" class="style-select" data-css="fontWeight">
+                                <option value="">기본</option>
+                                <option value="100">100 Thin</option>
+                                <option value="200">200</option>
+                                <option value="300">300 Light</option>
+                                <option value="400">400 Regular</option>
+                                <option value="500">500 Medium</option>
+                                <option value="600">600 Semibold</option>
+                                <option value="700">700 Bold</option>
+                                <option value="800">800</option>
+                                <option value="900">900 Black</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>줄간격</label>
+                            <input type="number" id="spLineHeight" class="style-input-small" step="0.1" min="0" max="10" placeholder="1.5" data-css="lineHeight" data-ratio="true">
+                        </div>
+                        <div class="sp-field">
+                            <label>자간(px)</label>
+                            <input type="number" id="spLetterSpacing" class="style-input-small" step="0.1" min="-10" max="30" placeholder="0" data-css="letterSpacing" data-unit="px">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">글자 색상</label>
+                    <div class="style-row">
+                        <input type="color" id="spTextColor" class="color-picker" value="#333333" data-css="color" data-sync="spTextColorText">
+                        <input type="text" id="spTextColorText" class="color-text sp-grow" placeholder="#333333" data-css="color" data-sync="spTextColor">
+                        <button class="style-btn-small" data-clear="color" title="글자 색상 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">정렬</label>
+                    <div class="sp-btn-group">
+                        <button class="sp-toggle" data-css="textAlign" data-value="left" title="왼쪽 정렬"><span class="gs-ico" data-icon="align-left" data-icon-size="14"></span></button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="center" title="가운데 정렬">↔</button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="right" title="오른쪽 정렬"><span class="gs-ico" data-icon="align-right" data-icon-size="14"></span></button>
+                        <button class="sp-toggle" data-css="textAlign" data-value="justify" title="양쪽 정렬"><span class="gs-ico" data-icon="align-justify" data-icon-size="14"></span></button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">서식</label>
+                    <div class="sp-btn-group">
+                        <button class="sp-toggle" data-css="fontWeight" data-value="700" title="굵게"><strong>B</strong></button>
+                        <button class="sp-toggle" data-css="fontStyle" data-value="italic" title="기울임"><em>I</em></button>
+                        <button class="sp-toggle" data-css="textDecoration" data-value="underline" title="밑줄"><u>U</u></button>
+                        <button class="sp-toggle" data-css="textDecoration" data-value="line-through" title="취소선"><s>S</s></button>
+                    </div>
+                    <div class="sp-grid sp-grid-2">
+                        <div class="sp-field">
+                            <label>대소문자</label>
+                            <select id="spTextTransform" class="style-select" data-css="textTransform">
+                                <option value="">기본</option>
+                                <option value="none">없음</option>
+                                <option value="uppercase">대문자</option>
+                                <option value="lowercase">소문자</option>
+                                <option value="capitalize">첫 글자 대문자</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>줄바꿈</label>
+                            <select id="spWhiteSpace" class="style-select" data-css="whiteSpace">
+                                <option value="">기본</option>
+                                <option value="normal">자동</option>
+                                <option value="nowrap">줄바꿈 안 함</option>
+                                <option value="pre-wrap">공백 유지</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== 박스 ===================== -->
+            <div class="sp-pane" data-pane="box">
+                <div class="style-section">
+                    <label class="style-label">크기</label>
+                    <div class="sp-grid sp-grid-2">
+                        <div class="sp-field">
+                            <label>너비</label>
+                            <input type="text" id="spWidth" class="sp-input" placeholder="auto / 100% / 320px" data-css="width">
+                        </div>
+                        <div class="sp-field">
+                            <label>높이</label>
+                            <input type="text" id="spHeight" class="sp-input" placeholder="auto / 240px" data-css="height">
+                        </div>
+                        <div class="sp-field">
+                            <label>최소 너비</label>
+                            <input type="text" id="spMinWidth" class="sp-input" placeholder="0" data-css="minWidth">
+                        </div>
+                        <div class="sp-field">
+                            <label>최대 너비</label>
+                            <input type="text" id="spMaxWidth" class="sp-input" placeholder="none / 960px" data-css="maxWidth">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <div class="sp-label-row">
+                        <label class="style-label">바깥 여백 (margin)</label>
+                        <label class="sp-link"><input type="checkbox" id="spMarginLink"> 4방향 동일</label>
+                    </div>
+                    <div class="style-row spacing-row">
+                        <div class="spacing-item">
+                            <label>상</label>
+                            <input type="number" id="marginTop" class="style-input-small" data-css="marginTop" data-unit="px" data-group="margin">
+                        </div>
+                        <div class="spacing-item">
+                            <label>하</label>
+                            <input type="number" id="marginBottom" class="style-input-small" data-css="marginBottom" data-unit="px" data-group="margin">
+                        </div>
+                        <div class="spacing-item">
+                            <label>좌</label>
+                            <input type="number" id="marginLeft" class="style-input-small" data-css="marginLeft" data-unit="px" data-group="margin">
+                        </div>
+                        <div class="spacing-item">
+                            <label>우</label>
+                            <input type="number" id="marginRight" class="style-input-small" data-css="marginRight" data-unit="px" data-group="margin">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <div class="sp-label-row">
+                        <label class="style-label">안쪽 여백 (padding)</label>
+                        <label class="sp-link"><input type="checkbox" id="spPaddingLink"> 4방향 동일</label>
+                    </div>
+                    <div class="style-row spacing-row">
+                        <div class="spacing-item">
+                            <label>상</label>
+                            <input type="number" id="paddingTop" class="style-input-small" min="0" data-css="paddingTop" data-unit="px" data-group="padding">
+                        </div>
+                        <div class="spacing-item">
+                            <label>하</label>
+                            <input type="number" id="paddingBottom" class="style-input-small" min="0" data-css="paddingBottom" data-unit="px" data-group="padding">
+                        </div>
+                        <div class="spacing-item">
+                            <label>좌</label>
+                            <input type="number" id="paddingLeft" class="style-input-small" min="0" data-css="paddingLeft" data-unit="px" data-group="padding">
+                        </div>
+                        <div class="spacing-item">
+                            <label>우</label>
+                            <input type="number" id="paddingRight" class="style-input-small" min="0" data-css="paddingRight" data-unit="px" data-group="padding">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">테두리</label>
+                    <div class="style-row">
+                        <input type="number" id="borderWidth" class="style-input-small" value="1" min="0" max="40">
+                        <span class="style-unit">px</span>
+                        <select id="borderStyle" class="style-select sp-grow">
+                            <option value="solid">실선</option>
+                            <option value="dashed">점선</option>
+                            <option value="dotted">점</option>
+                            <option value="double">이중선</option>
+                            <option value="none">없음</option>
+                        </select>
+                        <input type="color" id="borderColor" class="color-picker" value="#cccccc">
+                    </div>
+                    <div class="style-row">
+                        <button class="style-btn" id="applyBorder">테두리 적용</button>
+                        <button class="style-btn-small" id="clearBorder" title="테두리 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
+                    </div>
+                    <div class="sp-grid sp-grid-4">
+                        <button class="sp-btn small" data-border-side="borderTop">위만</button>
+                        <button class="sp-btn small" data-border-side="borderBottom">아래만</button>
+                        <button class="sp-btn small" data-border-side="borderLeft">왼쪽만</button>
+                        <button class="sp-btn small" data-border-side="borderRight">오른쪽만</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">둥글기 (radius)</label>
+                    <div class="style-row">
+                        <input type="range" id="borderRadius" class="style-range" min="0" max="100" value="0" data-css="borderRadius" data-unit="px" data-sync="spRadiusNum">
+                        <input type="number" id="spRadiusNum" class="style-input-small" value="0" min="0" max="400" data-css="borderRadius" data-unit="px" data-sync="borderRadius">
+                        <span class="style-unit">px</span>
+                    </div>
+                    <div class="sp-grid sp-grid-4">
+                        <div class="sp-field">
+                            <label>↖</label>
+                            <input type="number" class="style-input-small" min="0" data-css="borderTopLeftRadius" data-unit="px">
+                        </div>
+                        <div class="sp-field">
+                            <label>↗</label>
+                            <input type="number" class="style-input-small" min="0" data-css="borderTopRightRadius" data-unit="px">
+                        </div>
+                        <div class="sp-field">
+                            <label>↙</label>
+                            <input type="number" class="style-input-small" min="0" data-css="borderBottomLeftRadius" data-unit="px">
+                        </div>
+                        <div class="sp-field">
+                            <label>↘</label>
+                            <input type="number" class="style-input-small" min="0" data-css="borderBottomRightRadius" data-unit="px">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">넘침 처리 (overflow)</label>
+                    <select id="spOverflow" class="style-select sp-grow" data-css="overflow">
+                        <option value="">기본</option>
+                        <option value="visible">보이기</option>
+                        <option value="hidden">숨기기</option>
+                        <option value="auto">자동 스크롤</option>
+                        <option value="scroll">항상 스크롤</option>
                     </select>
                 </div>
-                <div class="style-row">
-                    <button class="style-btn" id="applyGradient">그라데이션 적용</button>
-                    <button class="style-btn-small" id="clearGradient" title="그라데이션 제거">✕</button>
+            </div>
+
+            <!-- ===================== 배경 ===================== -->
+            <div class="sp-pane" data-pane="fill">
+                <div class="style-section">
+                    <label class="style-label">배경색</label>
+                    <div class="style-row">
+                        <input type="color" id="bgColor" class="color-picker" value="#ffffff" data-css="backgroundColor" data-sync="bgColorText">
+                        <input type="text" id="bgColorText" class="color-text sp-grow" placeholder="#ffffff" data-css="backgroundColor" data-sync="bgColor">
+                        <button class="style-btn-small" id="bgColorClear" title="배경색 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">배경 이미지</label>
+                    <div class="style-row">
+                        <input type="text" id="spBgImage" class="sp-input sp-grow" placeholder="https://... 이미지 주소">
+                        <button class="style-btn-small" id="spBgImageApply" title="배경 이미지 적용">적용</button>
+                    </div>
+                    <div class="sp-grid sp-grid-2">
+                        <div class="sp-field">
+                            <label>크기</label>
+                            <select class="style-select" data-css="backgroundSize">
+                                <option value="">기본</option>
+                                <option value="cover">꽉 채우기(cover)</option>
+                                <option value="contain">맞추기(contain)</option>
+                                <option value="auto">원본</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>반복</label>
+                            <select class="style-select" data-css="backgroundRepeat">
+                                <option value="">기본</option>
+                                <option value="no-repeat">반복 없음</option>
+                                <option value="repeat">반복</option>
+                                <option value="repeat-x">가로 반복</option>
+                                <option value="repeat-y">세로 반복</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">그림자</label>
+                    <div class="style-row">
+                        <input type="number" id="shadowX" class="style-input-small" value="0" placeholder="X" title="가로 위치">
+                        <input type="number" id="shadowY" class="style-input-small" value="4" placeholder="Y" title="세로 위치">
+                        <input type="number" id="shadowBlur" class="style-input-small" value="12" min="0" placeholder="블러" title="흐림">
+                        <input type="number" id="spShadowSpread" class="style-input-small" value="0" placeholder="확산" title="확산">
+                        <input type="color" id="shadowColor" class="color-picker" value="#000000">
+                    </div>
+                    <div class="style-row">
+                        <label class="sp-link"><input type="checkbox" id="spShadowInset"> 안쪽 그림자</label>
+                        <input type="range" id="spShadowAlpha" class="style-range" min="0" max="100" value="25" title="그림자 투명도">
+                        <span class="range-value" id="spShadowAlphaValue">25%</span>
+                    </div>
+                    <div class="style-row">
+                        <button class="style-btn" id="applyShadow">그림자 적용</button>
+                        <button class="style-btn-small" id="clearShadow" title="그림자 제거"><span class="gs-ico" data-icon="x" data-icon-size="13"></span></button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">투명도</label>
+                    <div class="style-row">
+                        <input type="range" id="spOpacity" class="style-range" min="0" max="100" value="100" data-css="opacity" data-percent="true" data-sync="spOpacityValue">
+                        <span class="range-value" id="spOpacityValue">100%</span>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <div class="sp-label-row">
+                        <label class="style-label">빠른 색상</label>
+                        <div class="sp-btn-group small" id="spPaletteTarget">
+                            <button class="sp-toggle active" data-palette-target="backgroundColor">배경</button>
+                            <button class="sp-toggle" data-palette-target="color">글자</button>
+                            <button class="sp-toggle" data-palette-target="borderColor">테두리</button>
+                        </div>
+                    </div>
+                    <div class="color-palette" id="colorPalette">
+                        <button class="palette-color" data-color="#ffffff" style="background:#ffffff" title="흰색"></button>
+                        <button class="palette-color" data-color="#f8fafc" style="background:#f8fafc" title="아주 연한 회색"></button>
+                        <button class="palette-color" data-color="#e2e8f0" style="background:#e2e8f0" title="연한 회색"></button>
+                        <button class="palette-color" data-color="#94a3b8" style="background:#94a3b8" title="회색"></button>
+                        <button class="palette-color" data-color="#475569" style="background:#475569" title="진회색"></button>
+                        <button class="palette-color" data-color="#1e293b" style="background:#1e293b" title="먹색"></button>
+                        <button class="palette-color" data-color="#000000" style="background:#000000" title="검정"></button>
+                        <button class="palette-color" data-color="#ef4444" style="background:#ef4444" title="빨강"></button>
+                        <button class="palette-color" data-color="#f97316" style="background:#f97316" title="오렌지"></button>
+                        <button class="palette-color" data-color="#f59e0b" style="background:#f59e0b" title="앰버"></button>
+                        <button class="palette-color" data-color="#eab308" style="background:#eab308" title="노랑"></button>
+                        <button class="palette-color" data-color="#84cc16" style="background:#84cc16" title="라임"></button>
+                        <button class="palette-color" data-color="#22c55e" style="background:#22c55e" title="초록"></button>
+                        <button class="palette-color" data-color="#10b981" style="background:#10b981" title="에메랄드"></button>
+                        <button class="palette-color" data-color="#14b8a6" style="background:#14b8a6" title="틸"></button>
+                        <button class="palette-color" data-color="#06b6d4" style="background:#06b6d4" title="시안"></button>
+                        <button class="palette-color" data-color="#3b82f6" style="background:#3b82f6" title="파랑"></button>
+                        <button class="palette-color" data-color="#6366f1" style="background:#6366f1" title="인디고"></button>
+                        <button class="palette-color" data-color="#8b5cf6" style="background:#8b5cf6" title="보라"></button>
+                        <button class="palette-color" data-color="#d946ef" style="background:#d946ef" title="퍼플"></button>
+                        <button class="palette-color" data-color="#ec4899" style="background:#ec4899" title="핑크"></button>
+                        <button class="palette-color" data-color="#f43f5e" style="background:#f43f5e" title="로즈"></button>
+                        <button class="palette-color" data-color="#a16207" style="background:#a16207" title="브라운"></button>
+                        <button class="palette-color" data-color="transparent" style="background:transparent" title="투명"></button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 텍스트 색상 -->
-            <div class="style-section">
-                <label class="style-label">텍스트 색상</label>
-                <div class="style-row">
-                    <input type="color" id="textColor" class="color-picker" value="#333333">
-                    <input type="text" id="textColorText" class="color-text" placeholder="#333333">
-                </div>
-            </div>
-
-            <!-- 보더 -->
-            <div class="style-section">
-                <label class="style-label">보더</label>
-                <div class="style-row">
-                    <input type="number" id="borderWidth" class="style-input-small" value="1" min="0" max="20">
-                    <span class="style-unit">px</span>
-                    <select id="borderStyle" class="style-select">
-                        <option value="solid">실선</option>
-                        <option value="dashed">점선</option>
-                        <option value="dotted">점</option>
-                        <option value="double">이중선</option>
-                        <option value="none">없음</option>
+            <!-- ===================== 배치 ===================== -->
+            <div class="sp-pane" data-pane="layout">
+                <div class="style-section">
+                    <label class="style-label">표시 방식 (display)</label>
+                    <select id="spDisplay" class="style-select sp-grow" data-css="display">
+                        <option value="">기본</option>
+                        <option value="block">block</option>
+                        <option value="inline">inline</option>
+                        <option value="inline-block">inline-block</option>
+                        <option value="flex">flex</option>
+                        <option value="inline-flex">inline-flex</option>
+                        <option value="grid">grid</option>
+                        <option value="none">숨김 (none)</option>
                     </select>
-                    <input type="color" id="borderColor" class="color-picker" value="#cccccc">
                 </div>
-                <div class="style-row">
-                    <button class="style-btn" id="applyBorder">보더 적용</button>
-                    <button class="style-btn-small" id="clearBorder" title="보더 제거">✕</button>
+
+                <div class="style-section">
+                    <label class="style-label">Flex 정렬 (display: flex 일 때)</label>
+                    <div class="sp-grid sp-grid-2">
+                        <div class="sp-field">
+                            <label>방향</label>
+                            <select class="style-select" data-css="flexDirection">
+                                <option value="">기본</option>
+                                <option value="row">가로 →</option>
+                                <option value="row-reverse">가로 ←</option>
+                                <option value="column">세로 ↓</option>
+                                <option value="column-reverse">세로 ↑</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>줄바꿈</label>
+                            <select class="style-select" data-css="flexWrap">
+                                <option value="">기본</option>
+                                <option value="nowrap">한 줄</option>
+                                <option value="wrap">여러 줄</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>가로 배치</label>
+                            <select class="style-select" data-css="justifyContent">
+                                <option value="">기본</option>
+                                <option value="flex-start">시작</option>
+                                <option value="center">가운데</option>
+                                <option value="flex-end">끝</option>
+                                <option value="space-between">양끝 정렬</option>
+                                <option value="space-around">균등 여백</option>
+                                <option value="space-evenly">완전 균등</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>세로 배치</label>
+                            <select class="style-select" data-css="alignItems">
+                                <option value="">기본</option>
+                                <option value="flex-start">위</option>
+                                <option value="center">가운데</option>
+                                <option value="flex-end">아래</option>
+                                <option value="stretch">늘리기</option>
+                                <option value="baseline">기준선</option>
+                            </select>
+                        </div>
+                        <div class="sp-field">
+                            <label>간격(gap)</label>
+                            <input type="number" class="style-input-small" min="0" data-css="gap" data-unit="px">
+                        </div>
+                        <div class="sp-field">
+                            <label>그리드 열</label>
+                            <input type="text" class="sp-input" placeholder="repeat(3, 1fr)" data-css="gridTemplateColumns">
+                        </div>
+                    </div>
+                    <div class="sp-grid sp-grid-2">
+                        <button class="sp-btn" id="spFlexRowCenter" title="가로 배치 + 가운데 정렬 한 번에"><span class="gs-ico" data-icon="zap" data-icon-size="14"></span> 가로 가운데 정렬</button>
+                        <button class="sp-btn" id="spCenterBlock" title="margin: 0 auto 로 가운데 배치"><span class="gs-ico" data-icon="zap" data-icon-size="14"></span> 블록 가운데</button>
+                    </div>
+                </div>
+
+                <div class="style-section">
+                    <label class="style-label">위치 (position)</label>
+                    <select id="spPosition" class="style-select sp-grow" data-css="position">
+                        <option value="">기본</option>
+                        <option value="static">static</option>
+                        <option value="relative">relative</option>
+                        <option value="absolute">absolute</option>
+                        <option value="fixed">fixed</option>
+                        <option value="sticky">sticky</option>
+                    </select>
+                    <div class="sp-grid sp-grid-4">
+                        <div class="sp-field">
+                            <label>top</label>
+                            <input type="text" class="sp-input" placeholder="auto" data-css="top">
+                        </div>
+                        <div class="sp-field">
+                            <label>right</label>
+                            <input type="text" class="sp-input" placeholder="auto" data-css="right">
+                        </div>
+                        <div class="sp-field">
+                            <label>bottom</label>
+                            <input type="text" class="sp-input" placeholder="auto" data-css="bottom">
+                        </div>
+                        <div class="sp-field">
+                            <label>left</label>
+                            <input type="text" class="sp-input" placeholder="auto" data-css="left">
+                        </div>
+                    </div>
+                    <div class="sp-grid sp-grid-2">
+                        <div class="sp-field">
+                            <label>z-index</label>
+                            <input type="number" class="style-input-small" data-css="zIndex">
+                        </div>
+                        <div class="sp-field">
+                            <label>커서</label>
+                            <select class="style-select" data-css="cursor">
+                                <option value="">기본</option>
+                                <option value="pointer">손가락</option>
+                                <option value="default">화살표</option>
+                                <option value="not-allowed">금지</option>
+                                <option value="text">텍스트</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 보더 래디우스 -->
-            <div class="style-section">
-                <label class="style-label">둥글기 (Border Radius)</label>
-                <div class="style-row">
-                    <input type="range" id="borderRadius" class="style-range" min="0" max="50" value="0">
-                    <span id="borderRadiusValue" class="range-value">0px</span>
-                </div>
-            </div>
+            <!-- ===================== 문서 ===================== -->
+            <div class="sp-pane" data-pane="doc">
+                <p class="sp-hint"><span class="gs-ico" data-icon="bulb" data-icon-size="14"></span> 여기서 바꾸는 값은 <strong>문서 전체</strong>에 적용되고, 다운로드한 HTML 에도 그대로 남습니다. 선택한 요소 안에만 적용하려면 아래에서 범위를 바꾸세요.</p>
 
-            <!-- 여백 -->
-            <div class="style-section">
-                <label class="style-label">여백</label>
-                <div class="style-row spacing-row">
-                    <div class="spacing-item">
-                        <label>상</label>
-                        <input type="number" id="marginTop" class="style-input-small" value="0" min="0">
-                    </div>
-                    <div class="spacing-item">
-                        <label>하</label>
-                        <input type="number" id="marginBottom" class="style-input-small" value="0" min="0">
-                    </div>
-                    <div class="spacing-item">
-                        <label>좌</label>
-                        <input type="number" id="marginLeft" class="style-input-small" value="0" min="0">
-                    </div>
-                    <div class="spacing-item">
-                        <label>우</label>
-                        <input type="number" id="marginRight" class="style-input-small" value="0" min="0">
+                <div class="style-section">
+                    <label class="style-label">적용 범위</label>
+                    <div class="sp-grid sp-grid-2">
+                        <button class="sp-toggle active" id="spDocScopeAll" data-scope="all">문서 전체</button>
+                        <button class="sp-toggle" id="spDocScopeSel" data-scope="selection">선택 요소 안</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- 패딩 -->
-            <div class="style-section">
-                <label class="style-label">패딩</label>
-                <div class="style-row spacing-row">
-                    <div class="spacing-item">
-                        <label>상</label>
-                        <input type="number" id="paddingTop" class="style-input-small" value="0" min="0">
+                <div class="style-section">
+                    <label class="style-label">글꼴 조합</label>
+                    <div class="sp-preset-grid" id="spFontPresets">
+                        <button class="sp-preset" data-font-preset="pretendard">
+                            <span class="sp-preset-name">프리텐다드</span>
+                            <span class="sp-preset-desc">제목 · 본문 모두 Pretendard</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="myeongjo">
+                            <span class="sp-preset-name">명조 제목 + 고딕 본문</span>
+                            <span class="sp-preset-desc">나눔명조 / 나눔고딕</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="noto">
+                            <span class="sp-preset-name">Noto 조합</span>
+                            <span class="sp-preset-desc">Noto Serif KR / Noto Sans KR</span>
+                        </button>
+                        <button class="sp-preset" data-font-preset="system">
+                            <span class="sp-preset-name">시스템 글꼴</span>
+                            <span class="sp-preset-desc">웹폰트 없이 — 오프라인 배포용</span>
+                        </button>
                     </div>
-                    <div class="spacing-item">
-                        <label>하</label>
-                        <input type="number" id="paddingBottom" class="style-input-small" value="0" min="0">
-                    </div>
-                    <div class="spacing-item">
-                        <label>좌</label>
-                        <input type="number" id="paddingLeft" class="style-input-small" value="0" min="0">
-                    </div>
-                    <div class="spacing-item">
-                        <label>우</label>
-                        <input type="number" id="paddingRight" class="style-input-small" value="0" min="0">
-                    </div>
+                    <label class="sp-check">
+                        <input type="checkbox" id="spDocWebfont" checked>
+                        웹폰트 링크 포함 (끄면 방문자 PC 에 설치된 글꼴만 사용)
+                    </label>
                 </div>
-            </div>
 
-            <!-- 그림자 -->
-            <div class="style-section">
-                <label class="style-label">그림자 (Box Shadow)</label>
-                <div class="style-row">
-                    <input type="number" id="shadowX" class="style-input-small" value="0" placeholder="X">
-                    <input type="number" id="shadowY" class="style-input-small" value="2" placeholder="Y">
-                    <input type="number" id="shadowBlur" class="style-input-small" value="4" placeholder="블러">
-                    <input type="color" id="shadowColor" class="color-picker" value="#000000">
+                <div class="style-section">
+                    <label class="style-label">색 팔레트 (그라데이션 없음)</label>
+                    <div class="sp-palette-grid" id="spDocPalettes"></div>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn" id="spFlattenGradients" title="문서 안의 그라데이션 배경을 단색으로 바꿉니다"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 그라데이션 평탄화</button>
+                    </div>
                 </div>
-                <div class="style-row">
-                    <button class="style-btn" id="applyShadow">그림자 적용</button>
-                    <button class="style-btn-small" id="clearShadow" title="그림자 제거">✕</button>
-                </div>
-            </div>
 
-            <!-- 폰트 크기 -->
-            <div class="style-section">
-                <label class="style-label">폰트 크기</label>
-                <div class="style-row">
-                    <input type="range" id="fontSize" class="style-range" min="8" max="72" value="16">
-                    <span id="fontSizeValue" class="range-value">16px</span>
+                <div class="style-section">
+                    <label class="style-label">제안서 타이포 정돈</label>
+                    <div class="sp-check-list">
+                        <label class="sp-check"><input type="checkbox" id="spTypoBody" checked> 본문 16px · 줄간격 1.7</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoHeading" checked> 제목 크기 정리 (32 / 24 / 19px)</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoRhythm" checked> 문단 · 목록 간격 통일</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoMeasure"> 본문 최대 폭 820px 가운데</label>
+                        <label class="sp-check"><input type="checkbox" id="spTypoTable" checked> 표 헤더 · 헤어라인 정리</label>
+                    </div>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn primary" id="spApplyTypo"><span class="gs-ico" data-icon="check" data-icon-size="14"></span> 선택한 항목 적용</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- 프리셋 컬러 팔레트 -->
-            <div class="style-section">
-                <label class="style-label">빠른 색상</label>
-                <div class="color-palette" id="colorPalette">
-                    <button class="palette-color" data-color="#ffffff" style="background:#ffffff" title="흰색"></button>
-                    <button class="palette-color" data-color="#000000" style="background:#000000" title="검정"></button>
-                    <button class="palette-color" data-color="#f44336" style="background:#f44336" title="빨강"></button>
-                    <button class="palette-color" data-color="#e91e63" style="background:#e91e63" title="핑크"></button>
-                    <button class="palette-color" data-color="#9c27b0" style="background:#9c27b0" title="보라"></button>
-                    <button class="palette-color" data-color="#673ab7" style="background:#673ab7" title="딥퍼플"></button>
-                    <button class="palette-color" data-color="#3f51b5" style="background:#3f51b5" title="인디고"></button>
-                    <button class="palette-color" data-color="#2196f3" style="background:#2196f3" title="파랑"></button>
-                    <button class="palette-color" data-color="#03a9f4" style="background:#03a9f4" title="라이트블루"></button>
-                    <button class="palette-color" data-color="#00bcd4" style="background:#00bcd4" title="시안"></button>
-                    <button class="palette-color" data-color="#009688" style="background:#009688" title="틸"></button>
-                    <button class="palette-color" data-color="#4caf50" style="background:#4caf50" title="초록"></button>
-                    <button class="palette-color" data-color="#8bc34a" style="background:#8bc34a" title="라이트그린"></button>
-                    <button class="palette-color" data-color="#cddc39" style="background:#cddc39" title="라임"></button>
-                    <button class="palette-color" data-color="#ffeb3b" style="background:#ffeb3b" title="노랑"></button>
-                    <button class="palette-color" data-color="#ffc107" style="background:#ffc107" title="앰버"></button>
-                    <button class="palette-color" data-color="#ff9800" style="background:#ff9800" title="오렌지"></button>
-                    <button class="palette-color" data-color="#ff5722" style="background:#ff5722" title="딥오렌지"></button>
-                    <button class="palette-color" data-color="#795548" style="background:#795548" title="브라운"></button>
-                    <button class="palette-color" data-color="#9e9e9e" style="background:#9e9e9e" title="그레이"></button>
+                <div class="style-section">
+                    <label class="style-label">문서 테마 초기화</label>
+                    <div class="sp-grid sp-grid-1">
+                        <button class="sp-btn danger" id="spResetDocTheme" title="이 탭에서 적용한 문서 테마를 모두 제거합니다"><span class="gs-ico" data-icon="reset" data-icon-size="14"></span> 문서 테마 제거</button>
+                    </div>
                 </div>
             </div>
 
@@ -346,7 +841,7 @@
     <div class="modal-overlay" id="aiModal" style="display: none;">
         <div class="modal-content ai-modal">
             <div class="modal-header">
-                <h2>🤖 AI 스타일 변환</h2>
+                <h2><span class="gs-ico" data-icon="sparkle" data-icon-size="15"></span> AI 스타일 변환</h2>
                 <button class="modal-close" id="aiModalClose">×</button>
             </div>
 
@@ -374,9 +869,19 @@
                     <label class="ai-label">API 키</label>
                     <div class="api-key-row">
                         <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API 키를 입력하세요">
-                        <button class="toggle-visibility" id="toggleApiKey">👁</button>
+                        <button class="toggle-visibility" id="toggleApiKey"><span class="gs-ico" data-icon="eye"></span></button>
                     </div>
-                    <small class="api-key-hint">API 키는 브라우저에 저장되며 외부로 전송되지 않습니다.</small>
+                    <small class="api-key-hint">API 키는 이 브라우저(localStorage)에만 저장되며, 스타일 생성 요청 시 선택한 AI 제공사(Google·Anthropic·OpenAI)로만 전송됩니다.</small>
+                </div>
+
+                <div class="ai-section">
+                    <label class="ai-label">모델명</label>
+                    <input type="text" id="aiModelInput" class="api-key-input" placeholder="기본 모델 사용" autocomplete="off">
+                    <small class="api-key-hint">비워두면 기본 모델을 사용합니다. <span id="aiModelDefault"></span></small>
+                    <div class="ai-test-row">
+                        <button type="button" id="aiTestBtn" class="sp-btn">연결 테스트</button>
+                        <span id="aiTestStatus" class="ai-test-status">키와 모델명이 실제로 통하는지 확인합니다</span>
+                    </div>
                 </div>
 
                 <!-- 스타일 프롬프트 -->
@@ -389,12 +894,12 @@
                 <div class="ai-section">
                     <label class="ai-label">빠른 스타일</label>
                     <div class="quick-prompts">
-                        <button class="quick-prompt-btn" data-prompt="모던하고 미니멀한 디자인으로 변경해줘. 깔끔한 여백과 심플한 색상을 사용해줘.">🎯 모던 미니멀</button>
-                        <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘.">🌙 다크 테마</button>
-                        <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘.">🌸 따뜻한 느낌</button>
-                        <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘.">💼 프로페셔널</button>
-                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 밝은 색상과 그라데이션, 동적인 느낌을 사용해줘.">🎨 활기찬</button>
-                        <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘.">✨ 럭셔리</button>
+                        <button class="quick-prompt-btn" data-prompt="모던하고 미니멀한 디자인으로 변경해줘. 깔끔한 여백과 심플한 색상을 사용해줘."><span class="gs-ico" data-icon="target" data-icon-size="14"></span> 모던 미니멀</button>
+                        <button class="quick-prompt-btn" data-prompt="다크 테마로 변경해줘. 어두운 배경에 밝은 텍스트, 네온 느낌의 강조색을 사용해줘."><span class="gs-ico" data-icon="moon" data-icon-size="14"></span> 다크 테마</button>
+                        <button class="quick-prompt-btn" data-prompt="따뜻하고 친근한 느낌으로 변경해줘. 파스텔톤과 부드러운 그림자를 사용해줘."><span class="gs-ico" data-icon="heart" data-icon-size="14"></span> 따뜻한 느낌</button>
+                        <button class="quick-prompt-btn" data-prompt="기업용 프로페셔널한 느낌으로 변경해줘. 신뢰감 있는 파란색 계열과 깔끔한 레이아웃을 사용해줘."><span class="gs-ico" data-icon="briefcase" data-icon-size="14"></span> 프로페셔널</button>
+                        <button class="quick-prompt-btn" data-prompt="활기차고 젊은 느낌으로 변경해줘. 채도 높은 단색과 시원한 여백을 사용하고 그라데이션은 쓰지 마."><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 활기찬</button>
+                        <button class="quick-prompt-btn" data-prompt="고급스럽고 럭셔리한 느낌으로 변경해줘. 골드, 블랙 등의 색상과 우아한 타이포그래피를 사용해줘."><span class="gs-ico" data-icon="sparkle" data-icon-size="14"></span> 럭셔리</button>
                     </div>
                 </div>
 
@@ -417,7 +922,7 @@
             <div class="modal-footer">
                 <button class="modal-btn secondary" id="aiModalCancel">취소</button>
                 <button class="modal-btn primary" id="aiApplyBtn">
-                    <span class="btn-text">✨ AI 스타일 적용</span>
+                    <span class="btn-text"><span class="gs-ico" data-icon="sparkle" data-icon-size="14"></span> AI 스타일 적용</span>
                     <span class="btn-loading" style="display:none;">처리 중...</span>
                 </button>
             </div>
@@ -426,50 +931,51 @@
 
     <!-- 컨텍스트 메뉴 -->
     <div class="context-menu" id="contextMenu" style="display: none;">
-        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-item" data-action="style"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 스타일 편집</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="select-same-tag">🧲 같은 태그 모두 선택</div>
-        <div class="context-menu-item" data-action="select-tag-class">🧲 태그+클래스 일치 선택</div>
-        <div class="context-menu-item" data-action="select-siblings">🧲 형제 모두 선택</div>
-        <div class="context-menu-item" data-action="select-descendants">🧲 하위 동일 태그 전체</div>
+        <div class="context-menu-item" data-action="select-same-tag"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 같은 태그 모두 선택</div>
+        <div class="context-menu-item" data-action="select-tag-class"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 태그+클래스 일치 선택</div>
+        <div class="context-menu-item" data-action="select-siblings"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 형제 모두 선택</div>
+        <div class="context-menu-item" data-action="select-descendants"><span class="gs-ico" data-icon="magnet" data-icon-size="14"></span> 하위 동일 태그 전체</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="add-button">➕ 버튼 추가</div>
-        <div class="context-menu-item" data-action="add-list-item">➕ 리스트 아이템 추가</div>
-        <div class="context-menu-item" data-action="add-image">➕ 이미지 추가</div>
-        <div class="context-menu-item" data-action="add-link">➕ 링크 추가</div>
+        <div class="context-menu-item" data-action="add-button"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 버튼 추가</div>
+        <div class="context-menu-item" data-action="add-list-item"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 리스트 아이템 추가</div>
+        <div class="context-menu-item" data-action="add-image"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 이미지 추가</div>
+        <div class="context-menu-item" data-action="add-link"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 링크 추가</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="wrap-div">📦 div로 감싸기</div>
-        <div class="context-menu-item" data-action="unwrap">📤 감싸기 해제</div>
-        <div class="context-menu-item" data-action="move-out">↗️ 부모 밖으로 이동</div>
+        <div class="context-menu-item" data-action="wrap-div"><span class="gs-ico" data-icon="package" data-icon-size="14"></span> div로 감싸기</div>
+        <div class="context-menu-item" data-action="unwrap"><span class="gs-ico" data-icon="unwrap" data-icon-size="14"></span> 감싸기 해제</div>
+        <div class="context-menu-item" data-action="move-out">↗️ 부모 밖으로 빼기</div>
+        <div class="context-menu-item" data-action="nest-prev">↘️ 앞 요소 안으로 넣기</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
-        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+        <div class="context-menu-item" data-action="duplicate"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</div>
+        <div class="context-menu-item" data-action="delete"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</div>
     </div>
 
     <!-- 테이블 전용 컨텍스트 메뉴 -->
     <div class="table-context-menu" id="tableContextMenu" style="display: none;">
-        <div class="context-menu-item" data-action="style">🎨 스타일 편집</div>
+        <div class="context-menu-item" data-action="style"><span class="gs-ico" data-icon="palette" data-icon-size="14"></span> 스타일 편집</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="add-row-above">⬆️ 위에 행 추가</div>
-        <div class="context-menu-item" data-action="add-row-below">⬇️ 아래에 행 추가</div>
-        <div class="context-menu-item" data-action="add-col-left">⬅️ 왼쪽에 열 추가</div>
-        <div class="context-menu-item" data-action="add-col-right">➡️ 오른쪽에 열 추가</div>
+        <div class="context-menu-item" data-action="add-row-above"><span class="gs-ico" data-icon="arrow-up" data-icon-size="14"></span> 위에 행 추가</div>
+        <div class="context-menu-item" data-action="add-row-below"><span class="gs-ico" data-icon="arrow-down" data-icon-size="14"></span> 아래에 행 추가</div>
+        <div class="context-menu-item" data-action="add-col-left"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 왼쪽에 열 추가</div>
+        <div class="context-menu-item" data-action="add-col-right"><span class="gs-ico" data-icon="plus" data-icon-size="14"></span> 오른쪽에 열 추가</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="delete-row">❌ 행 삭제</div>
-        <div class="context-menu-item" data-action="delete-col">❌ 열 삭제</div>
+        <div class="context-menu-item" data-action="delete-row"><span class="gs-ico" data-icon="x" data-icon-size="14"></span> 행 삭제</div>
+        <div class="context-menu-item" data-action="delete-col"><span class="gs-ico" data-icon="x" data-icon-size="14"></span> 열 삭제</div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" data-action="duplicate">📋 복제</div>
-        <div class="context-menu-item" data-action="delete">🗑️ 삭제</div>
+        <div class="context-menu-item" data-action="duplicate"><span class="gs-ico" data-icon="copy" data-icon-size="14"></span> 복제</div>
+        <div class="context-menu-item" data-action="delete"><span class="gs-ico" data-icon="trash" data-icon-size="14"></span> 삭제</div>
     </div>
 
     <!-- 플로팅 툴바 -->
     <div class="floating-toolbar" id="floatingToolbar" style="display: none;">
-        <button class="toolbar-btn" data-action="move-up" title="위로 이동">↑</button>
-        <button class="toolbar-btn" data-action="move-down" title="아래로 이동">↓</button>
-        <button class="toolbar-btn" data-action="style" title="스타일 편집">🎨</button>
-        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)">🧲</button>
-        <button class="toolbar-btn" data-action="duplicate" title="복제">📄</button>
-        <button class="toolbar-btn" data-action="delete" title="삭제">✖</button>
+        <button class="toolbar-btn" data-action="move-up" title="위로 이동"><span class="gs-ico" data-icon="arrow-up" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="move-down" title="아래로 이동"><span class="gs-ico" data-icon="arrow-down" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="style" title="스타일 편집"><span class="gs-ico" data-icon="palette" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="similar" title="유사 요소 일괄 선택 (Alt+클릭)"><span class="gs-ico" data-icon="magnet" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="duplicate" title="복제"><span class="gs-ico" data-icon="copy" data-icon-size="15"></span></button>
+        <button class="toolbar-btn" data-action="delete" title="삭제"><span class="gs-ico" data-icon="trash" data-icon-size="15"></span></button>
     </div>
 
     <!-- 유사 선택 드롭다운 -->
@@ -481,62 +987,19 @@
         <div class="similar-option" data-scope="descendants-same-tag">하위 동일 태그 <span class="count" id="similarCountDesc">0</span></div>
     </div>
 
-    <!-- 템플릿 라이브러리 패널 -->
-    <div class="template-panel" id="templatePanel">
-        <div class="template-panel-header">
-            <h3>🧩 Gluestack 템플릿</h3>
-            <button class="gs-icon-btn" id="templatePanelClose" title="닫기">×</button>
-        </div>
-        <div class="template-tabs">
-            <button class="template-tab active" data-category="component">컴포넌트</button>
-            <button class="template-tab" data-category="section">섹션</button>
-            <button class="template-tab" data-category="page">페이지</button>
-        </div>
-        <div class="template-search">
-            <input type="text" id="templateSearch" placeholder="🔍 템플릿 검색...">
-        </div>
-        <div class="template-grid" id="templateGrid"></div>
-    </div>
-
-    <!-- 에셋 팔레트 -->
-    <div class="asset-panel" id="assetPanel">
-        <div class="asset-panel-header">
-            <h3>🎨 에셋 라이브러리</h3>
-            <button class="gs-icon-btn" id="assetPanelClose" title="닫기">×</button>
-        </div>
-        <div class="asset-tabs">
-            <button class="asset-tab active" data-asset="icon">아이콘</button>
-            <button class="asset-tab" data-asset="image">이미지</button>
-            <button class="asset-tab" data-asset="gradient">그라디언트</button>
-            <button class="asset-tab" data-asset="color">색상</button>
-        </div>
-        <div class="asset-body" id="assetBody">
-            <!-- 아이콘 탭 기본 -->
-            <div class="asset-search-row" id="assetIconSearchRow">
-                <input type="text" id="iconSearch" placeholder="🔍 아이콘 검색 (예: check, heart, arrow)...">
-            </div>
-            <div class="icon-grid" id="iconGrid"></div>
-            <div class="icon-controls" id="iconControls" style="display:none;">
-                <div>
-                    <label>크기 <span class="value-chip" id="iconSizeValue">24px</span></label>
-                    <input type="range" id="iconSize" min="12" max="96" value="24">
-                </div>
-                <div>
-                    <label>두께 <span class="value-chip" id="iconStrokeValue">2</span></label>
-                    <input type="range" id="iconStroke" min="1" max="3" step="0.5" value="2">
-                </div>
-                <div style="grid-column: span 2;">
-                    <label>색상</label>
-                    <input type="color" id="iconColor" value="#0f172a" style="width:100%; height:32px; border:none; border-radius:6px; background:transparent;">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 히스토리 타임라인 패널 -->
+    <!-- 요소 트리 패널 (왼쪽) -->
+    <div class="tree-panel" id="treePanel">
+        <div class="history-panel-header">
+            <h3>요소 트리</h3>
+            <button class="history-panel-close" id="treePanelClose">×</button>
+        </div>
+        <div class="tree-list" id="treeList"></div>
+    </div>
+
     <div class="history-panel" id="historyPanel">
-        <div class="template-panel-header">
-            <h3>🕐 히스토리</h3>
+        <div class="history-panel-header">
+            <h3>히스토리</h3>
             <button class="gs-icon-btn" id="historyPanelClose" title="닫기">×</button>
         </div>
         <div class="history-list" id="historyList"></div>
@@ -545,7 +1008,7 @@
     <!-- 명령 팔레트 -->
     <div class="command-palette-overlay" id="commandPaletteOverlay" style="display: none;">
         <div class="command-palette" role="dialog" aria-label="명령 팔레트">
-            <input type="text" id="commandPaletteInput" class="command-palette-input" placeholder="⌨️  명령 검색... (예: 삭제, 템플릿, 다크모드)" autocomplete="off">
+            <input type="text" id="commandPaletteInput" class="command-palette-input" placeholder="명령 검색… (예: 복제, 감싸기, 다크 테마)" autocomplete="off">
             <div class="command-palette-list" id="commandPaletteList"></div>
         </div>
     </div>
@@ -554,7 +1017,7 @@
     <div class="modal-overlay shortcuts-modal" id="shortcutsModal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>⌨️ 단축키 가이드</h2>
+                <h2>단축키 가이드</h2>
                 <button class="modal-close" id="shortcutsModalClose">×</button>
             </div>
             <div class="modal-body">
@@ -570,6 +1033,9 @@
                     <div class="shortcut-row"><span>되돌리기 / 다시실행</span><div class="keys"><span class="key">Ctrl</span><span class="key">Z</span> / <span class="key">Ctrl</span><span class="key">Y</span></div></div>
                     <div class="shortcut-row"><span>위 / 아래 이동</span><div class="keys"><span class="key">↑</span> / <span class="key">↓</span></div></div>
                     <div class="shortcut-row"><span>복제</span><div class="keys"><span class="key">Ctrl</span><span class="key">D</span></div></div>
+                    <div class="shortcut-row"><span>복사 / 잘라내기</span><div class="keys"><span class="key">Ctrl</span><span class="key">C</span> / <span class="key">Ctrl</span><span class="key">X</span></div></div>
+                    <div class="shortcut-row"><span>붙여넣기 (선택 뒤에)</span><div class="keys"><span class="key">Ctrl</span><span class="key">V</span></div></div>
+                    <div class="shortcut-row"><span>텍스트 편집 시작</span><div class="keys"><span class="key">Enter</span> / <span class="key">F2</span></div></div>
                     <div class="shortcut-row"><span>삭제</span><div class="keys"><span class="key">Delete</span></div></div>
                 </div>
                 <div class="shortcut-group">
@@ -578,6 +1044,7 @@
                     <div class="shortcut-row"><span>동일 태그+클래스 일괄</span><div class="keys"><span class="key">Alt</span>+클릭</div></div>
                     <div class="shortcut-row"><span>범위 선택 (형제)</span><div class="keys"><span class="key">Ctrl</span><span class="key">Shift</span>+클릭</div></div>
                     <div class="shortcut-row"><span>모든 같은 태그</span><div class="keys"><span class="key">Ctrl</span><span class="key">A</span></div></div>
+                    <div class="shortcut-row"><span>선택 해제 / 닫기</span><div class="keys"><span class="key">Esc</span></div></div>
                 </div>
                 <div class="shortcut-group">
                     <h4>탐색</h4>
@@ -589,28 +1056,11 @@
         </div>
     </div>
 
-    <!-- Monaco 에디터 모달 -->
-    <div class="modal-overlay monaco-modal" id="monacoModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🧠 Monaco 원본 편집기</h2>
-                <div style="display:flex; gap:8px;">
-                    <button class="gs-toolbar-btn" id="monacoReloadBtn" title="iframe 새로고침">↻ 미리보기</button>
-                    <button class="gs-toolbar-btn primary" id="monacoSaveBtn" title="저장 (Ctrl+S)">💾 저장</button>
-                    <button class="gs-icon-btn" id="monacoModalClose">×</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div id="monacoEditorHost"></div>
-            </div>
-        </div>
-    </div>
-
     <!-- 경로 설정 모달 -->
     <div class="modal-overlay" id="pathModal" style="display: none;">
         <div class="modal-content" style="max-width:520px;">
             <div class="modal-header">
-                <h2>📁 로컬 파일 경로 설정</h2>
+                <h2>로컬 파일 경로 설정</h2>
                 <button class="modal-close" id="pathModalClose">×</button>
             </div>
             <div class="modal-body">
@@ -631,6 +1081,19 @@
     <!-- 토스트 메시지 -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="script.js"></script>
+    <!-- 로드 순서 주의: editor-core.js 가 클래스를 선언하고 나머지가 prototype 을 확장한다 -->
+    <script src="js/icons.js"></script>
+    <script src="js/editor-core.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/selection.js"></script>
+    <script src="js/editing.js"></script>
+    <script src="js/canvas-controls.js"></script>
+    <script src="js/tree-panel.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/style-panel.js"></script>
+    <script src="js/doc-theme.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: "Inter", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    a { color: #2563eb; } a:hover { color: #1d4ed8; }
+    .sec { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #98a2b3; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 880px; height: 760px; box-sizing: border-box; background: #f5f6f8; padding: 28px; display: flex; flex-direction: column; gap: 18px;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <div style="font-size: 22px; font-weight: 700; color: #101828; letter-spacing: -0.01em;">A · 정밀 (Precision)</div>
+      <div style="font-size: 12px; font-weight: 600; color: #2563eb; background: #eff4ff; border-radius: 999px; padding: 3px 9px;">기존 토큰을 끝까지 밀어붙임</div>
+    </div>
+    <div style="font-size: 13px; line-height: 1.6; color: #475467; max-width: 720px; text-wrap: pretty;">파랑 하나만 강조색으로 쓰고 나머지는 전부 무채색. 컨트롤 높이 36→32px, 여백은 4px 격자, 테두리는 1px 헤어라인. 도구가 조용해지고 편집 중인 문서가 화면의 주인공이 됩니다.<br><span style="color: #98a2b3;">트레이드오프 — 절제된 만큼 첫인상의 개성은 약합니다.</span></div>
+  </div>
+
+  <!-- 툴바 -->
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="sec">상단 툴바 · 높이 52px</div>
+    <div style="height: 52px; background: #ffffff; border: 1px solid #e4e7ec; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; box-shadow: 0 1px 2px rgba(16,24,40,0.04);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span class="mono" style="font-size: 13px; font-weight: 500; color: #101828;">demo.html</span>
+        <span style="width: 1px; height: 18px; background: #e4e7ec;"></span>
+        <span style="font-size: 12px; font-weight: 500; color: #2563eb; background: #eff4ff; border-radius: 6px; padding: 3px 8px;">요소 편집</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button style="width: 32px; height: 32px; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg></button>
+        <button style="width: 32px; height: 32px; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button>
+        <span style="width: 1px; height: 18px; background: #e4e7ec; margin: 0 2px;"></span>
+        <button style="height: 32px; padding: 0 10px; font-size: 13px; font-weight: 500; color: #344054; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>원본 편집</button>
+        <button style="height: 32px; padding: 0 10px; font-size: 13px; font-weight: 500; color: #344054; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M3 12h3m12 0h3M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"/></svg>AI</button>
+        <button style="height: 32px; padding: 0 12px; font-size: 13px; font-weight: 600; color: #fff; background: #2563eb; border: 1px solid #2563eb; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(37,99,235,0.24);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>다운로드</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 18px; flex-grow: 1; min-height: 0;">
+
+    <!-- 선택 상태 -->
+    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+      <div class="sec">선택 상태 · 강조색 하나</div>
+      <div style="background: #fff; border: 1px solid #e4e7ec; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 14px; flex-grow: 1;">
+
+        <div style="display: flex; gap: 2px; padding: 4px; background: #fff; border: 1px solid #e4e7ec; border-radius: 8px; box-shadow: 0 6px 16px rgba(16,24,40,0.10); width: max-content;">
+          <button style="width: 30px; height: 30px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+          <button style="width: 30px; height: 30px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 12-7 7-7-7"/><path d="M12 5v14"/></svg></button>
+          <span style="width: 1px; height: 18px; background: #e4e7ec; align-self: center; margin: 0 3px;"></span>
+          <button style="width: 30px; height: 30px; border: none; border-radius: 5px; background: #eff4ff; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-1-1-1.5-2-1.5h-2a2 2 0 0 1 0-4h1c1 0 2-.6 2-2A3.5 3.5 0 0 0 12 3Z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="8" r="1"/></svg></button>
+          <button style="width: 30px; height: 30px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+          <button style="width: 30px; height: 30px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d92d20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg></button>
+        </div>
+
+        <div style="position: relative; outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 3px; padding: 14px 16px; background: #fff;">
+          <div style="position: absolute; top: -9px; left: 0; font-size: 10px; font-weight: 600; color: #fff; background: #2563eb; border-radius: 3px; padding: 1px 6px;" class="mono">h1.title</div>
+          <div style="font-size: 20px; font-weight: 700; color: #101828;">선택된 제목</div>
+        </div>
+
+        <div style="outline: 1px solid rgba(37,99,235,0.4); outline-offset: 2px; border-radius: 3px; padding: 12px 16px; background: #fff;">
+          <div style="font-size: 14px; color: #475467;">마우스 오버 — 같은 파랑, 얇게</div>
+        </div>
+
+        <div style="outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 3px; padding: 12px 16px; background: rgba(37,99,235,0.05); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 14px; color: #475467;">다중 선택 — 채움으로 구분</div>
+          <span class="mono" style="font-size: 11px; font-weight: 500; color: #2563eb; background: #eff4ff; border-radius: 4px; padding: 2px 7px;">3개</span>
+        </div>
+
+        <div style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px dashed #e4e7ec;">
+          <div style="display: flex; gap: 4px;">
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #101828;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #475467;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #98a2b3;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #e4e7ec;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #f5f6f8; border: 1px solid #e4e7ec;"></span>
+            <span style="width: 18px; height: 18px; border-radius: 3px; background: #2563eb;"></span>
+          </div>
+          <div style="font-size: 11px; color: #98a2b3;">무채색 5 + 강조 1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인스펙터 -->
+    <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+      <div class="sec">스타일 인스펙터</div>
+      <div style="background: #fff; border: 1px solid #e4e7ec; border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,0.08); overflow: hidden; display: flex; flex-direction: column; flex-grow: 1;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #e4e7ec;">
+          <div style="font-size: 13px; font-weight: 600; color: #101828;">스타일</div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 7px; padding: 9px 14px; background: #fafbfc; border-bottom: 1px solid #e4e7ec;">
+          <span class="mono" style="font-size: 11px; font-weight: 500; color: #fff; background: #101828; padding: 2px 7px; border-radius: 4px;">h1</span>
+          <span class="mono" style="font-size: 11px; color: #98a2b3;">.title</span>
+        </div>
+        <div style="display: flex; padding: 0 8px; border-bottom: 1px solid #e4e7ec;">
+          <div style="flex: 1; text-align: center; padding: 9px 0; font-size: 12px; font-weight: 600; color: #101828; box-shadow: inset 0 -2px 0 #2563eb;">구조</div>
+          <div style="flex: 1; text-align: center; padding: 9px 0; font-size: 12px; font-weight: 500; color: #98a2b3;">텍스트</div>
+          <div style="flex: 1; text-align: center; padding: 9px 0; font-size: 12px; font-weight: 500; color: #98a2b3;">박스</div>
+          <div style="flex: 1; text-align: center; padding: 9px 0; font-size: 12px; font-weight: 500; color: #98a2b3;">배경</div>
+          <div style="flex: 1; text-align: center; padding: 9px 0; font-size: 12px; font-weight: 500; color: #98a2b3;">배치</div>
+        </div>
+
+        <div style="padding: 14px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div class="sec">요소 꺼내기 · 넣기</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+              <button style="height: 30px; font-size: 12px; font-weight: 500; color: #fff; background: #2563eb; border: 1px solid #2563eb; border-radius: 6px;">부모 밖으로</button>
+              <button style="height: 30px; font-size: 12px; font-weight: 500; color: #344054; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px;">앞 요소 안으로</button>
+              <button style="height: 30px; font-size: 12px; font-weight: 500; color: #344054; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px;">div로 감싸기</button>
+              <button style="height: 30px; font-size: 12px; font-weight: 500; color: #344054; background: #fff; border: 1px solid #e4e7ec; border-radius: 6px;">감싸기 해제</button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div class="sec">글자 크기</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="flex-grow: 1; height: 4px; border-radius: 2px; background: #e4e7ec; position: relative;">
+                <div style="position: absolute; inset: 0 62% 0 0; background: #2563eb; border-radius: 2px;"></div>
+                <div style="position: absolute; left: 38%; top: -5px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid #2563eb; box-shadow: 0 1px 2px rgba(16,24,40,0.2);"></div>
+              </div>
+              <div class="mono" style="width: 54px; height: 30px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; padding: 0 8px; font-size: 12px; color: #101828; border: 1px solid #e4e7ec; border-radius: 6px; box-sizing: border-box;">42<span style="color: #98a2b3;">px</span></div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div class="sec">글자 색상 · 포커스 상태</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 30px; height: 30px; border-radius: 6px; background: #101828; border: 1px solid rgba(16,24,40,0.1);"></span>
+              <div class="mono" style="flex-grow: 1; height: 30px; display: flex; align-items: center; padding: 0 9px; font-size: 12px; color: #101828; background: #fff; border: 1px solid #2563eb; border-radius: 6px; box-shadow: 0 0 0 3px rgba(37,99,235,0.16); box-sizing: border-box;">#101828</div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div class="sec">정렬</div>
+            <div style="display: flex; gap: 4px; padding: 3px; background: #f5f6f8; border-radius: 7px;">
+              <button style="flex: 1; height: 26px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
+              <button style="flex: 1; height: 26px; border: none; border-radius: 5px; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,0.1); display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M6 18h12"/></svg></button>
+              <button style="flex: 1; height: 26px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
+              <button style="flex: 1; height: 26px; border: none; border-radius: 5px; background: transparent; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475467" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

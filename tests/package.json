@@ -1,0 +1,14 @@
+{
+  "name": "html-live-editor-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests and lint config for HTML Live Editor Pro",
+  "scripts": {
+    "test": "playwright test",
+    "lint": "cd .. && tests/node_modules/.bin/eslint --config tests/eslint.config.js script.js js tests/e2e --no-error-on-unmatched-pattern"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "eslint": "^9.17.0"
+  }
+}
